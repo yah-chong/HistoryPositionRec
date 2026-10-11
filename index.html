@@ -6,17 +6,18 @@
     <title>旅遊專用足跡回憶錄與打卡系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS 地圖庫 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body {
             background-color: #0b0f19;
             color: #ffffff;
-            font-size: 1.25rem; /* Extra large base font for seniors */
+            font-size: 1.25rem;
         }
-        /* High contrast focus and touch targets */
-        button, input {
+        button, input, select {
             min-height: 56px;
         }
-        /* 旋轉動畫 */
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -25,20 +26,131 @@
             display: inline-block;
             animation: spin 1s linear infinite;
         }
+        /* Leaflet 地圖字體與顏色微調 */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #ffffff;
+            color: #000000;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
 
-    <div class="max-w-2xl mx-auto">
-        <!-- 標題同一行顯示 -->
-        <header class="text-center mb-8 bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl">
+    <div class="max-w-2xl mx-auto space-y-6">
+        <!-- 標題 -->
+        <header class="text-center bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl">
             <h1 class="text-2xl sm:text-4xl font-black text-amber-300 mb-2 whitespace-nowrap flex items-center justify-center gap-2">
-                <span>🌟</span> <span>旅遊專用足跡回憶錄</span>
+                <span>📍</span> <span>旅遊專用足跡地圖與打卡系統</span>
             </h1>
-            <p class="text-xl text-slate-200">輕鬆打卡、自動計算距離、一鍵導航回憶</p>
+            <p class="text-xl text-slate-200">輕鬆打卡、地圖回顧、一鍵導航</p>
         </header>
 
-        <!-- Custom Message Modal (No alert()) -->
+        <!-- 圖片風格之地圖檢視專區 (卡片式呈現) -->
+        <section class="bg-slate-900 border-4 border-slate-700 rounded-3xl p-5 shadow-2xl space-y-4">
+            
+            <!-- 1. 選擇打卡駐點足跡下拉選單 -->
+            <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-md border-2 border-slate-300">
+                <label for="locationSelect" class="block text-xl font-bold mb-2 flex items-center gap-2">
+                    📍 選擇打卡駐點足跡：
+                </label>
+                <div class="relative">
+                    <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-3 text-xl focus:outline-none focus:ring-4 focus:ring-blue-300">
+                        <!-- 選項會透過 JavaScript 自動動態載入 -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. 與目標位置距離卡片 -->
+            <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-md border-l-8 border-emerald-600 flex justify-between items-center">
+                <span class="text-xl font-black flex items-center gap-2">
+                    📍 您與目標位置距離：
+                </span>
+                <span id="targetDistance" class="text-2xl font-black text-emerald-800">
+                    -- 公里
+                </span>
+            </div>
+
+            <!-- 3. Leaflet 地圖顯示區域 -->
+            <div class="rounded-2xl overflow-hidden border-4 border-slate-700 shadow-inner">
+                <div id="map" class="w-full h-80 z-0"></div>
+            </div>
+
+            <!-- 4. 出發導航綠色按鈕 -->
+            <div>
+                <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-3 text-center transition-transform active:scale-95">
+                    🚗 出發 GO GO GO (開啟導航 Google 地圖)
+                </a>
+            </div>
+
+        </section>
+
+        <!-- 新增打卡區塊 -->
+        <section class="bg-slate-900 border-4 border-cyan-400 rounded-3xl p-6 shadow-2xl space-y-6">
+            <h2 class="text-2xl sm:text-3xl font-black text-cyan-300 flex items-center gap-2">
+                ✍️ 新增旅遊駐點打卡
+            </h2>
+
+            <!-- Step 1: GPS Button -->
+            <div>
+                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
+                    📡 1. 開啟 GPS 並取得目前位置
+                </button>
+                <div id="gpsStatus" class="mt-3 text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
+                    ⚠️ 尚未取得 GPS 定位
+                </div>
+            </div>
+
+            <!-- Step 2: Location description input -->
+            <div class="space-y-2">
+                <label for="locDesc" class="block text-xl font-bold text-slate-200">
+                    ✍️ 2. 輸入位置說明 (例如: 鳳山青年夜市 / 杉林衛生所)
+                </label>
+                <input type="text" id="locDesc" placeholder="請點此輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-2xl placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-300">
+            </div>
+
+            <!-- Step 3: Save button -->
+            <div>
+                <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-5 px-6 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
+                    💾 3. 上傳 / 儲存打卡紀錄
+                </button>
+            </div>
+        </section>
+
+        <!-- 報平安與備份小工具區塊 -->
+        <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl space-y-4">
+            <h2 class="text-2xl sm:text-3xl font-black text-amber-300 flex items-center gap-2">
+                🛠️ 旅遊便利小工具
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-amber-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    📋 複製 LINE 報平安足跡
+                </button>
+                <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-indigo-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    📤 備份回憶資料
+                </button>
+                <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-violet-300 flex items-center justify-center gap-2 transition-transform active:scale-95 sm:col-span-2">
+                    📥 還原備份資料
+                </button>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
+            </div>
+        </section>
+
+        <!-- 所有打卡紀錄清單管理 -->
+        <section class="bg-slate-900 border-4 border-purple-400 rounded-3xl p-6 shadow-2xl space-y-4">
+            <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-purple-300 flex items-center justify-between transition-transform active:scale-95">
+                <span>📦 詳細打卡紀錄列表</span>
+                <span id="warehouseToggleText" class="text-amber-300 text-xl">[ 展開 🔽 ]</span>
+            </button>
+            
+            <div id="historyWarehouseContainer" class="hidden space-y-4 pt-4 border-t-2 border-purple-800">
+                <div id="allRecordList" class="space-y-4">
+                    <!-- 紀錄選單清單渲染區域 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 彈窗與二次確認 -->
         <div id="msgModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl">
                 <p id="msgText" class="text-2xl font-bold text-amber-300 mb-6"></p>
@@ -48,7 +160,6 @@
             </div>
         </div>
 
-        <!-- Delete Confirm Modal (二次確認刪除視窗) -->
         <div id="deleteModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-6">
                 <p class="text-2xl font-bold text-rose-300">⚠️ 請問確定要刪除這筆回憶紀錄嗎？</p>
@@ -63,91 +174,8 @@
             </div>
         </div>
 
-        <main class="space-y-8">
-            <!-- 新增打卡區塊 -->
-            <section class="bg-slate-900 border-4 border-cyan-400 rounded-3xl p-6 shadow-2xl space-y-6">
-                <h2 class="text-2xl sm:text-3xl font-black text-cyan-300 flex items-center gap-2">
-                    📍 新增旅遊駐點打卡
-                </h2>
-
-                <!-- Step 1: GPS Button -->
-                <div>
-                    <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
-                        📡 1. 開啟 GPS 並取得目前位置
-                    </button>
-                    <div id="gpsStatus" class="mt-3 text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
-                        ⚠️ 尚未取得 GPS 定位
-                    </div>
-                </div>
-
-                <!-- Step 2: Location description input -->
-                <div class="space-y-2">
-                    <label for="locDesc" class="block text-xl font-bold text-slate-200">
-                        ✍️ 2. 輸入位置說明 (例如: 鳳山青年夜市 / 衛武營捷運站3號出口)
-                    </label>
-                    <input type="text" id="locDesc" placeholder="請點此輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-2xl placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-300">
-                </div>
-
-                <!-- Step 3: Save button -->
-                <div>
-                    <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-5 px-6 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
-                        💾 3. 上傳 / 儲存打卡紀錄
-                    </button>
-                </div>
-            </section>
-
-            <!-- 報平安與備份功能區塊 -->
-            <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl space-y-4">
-                <h2 class="text-2xl sm:text-3xl font-black text-amber-300 flex items-center gap-2">
-                    🛠️ 旅遊便利小工具
-                </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-amber-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                        📋 複製 LINE 報平安足跡
-                    </button>
-                    <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-indigo-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                        📤 備份回憶資料
-                    </button>
-                    <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-violet-300 flex items-center justify-center gap-2 transition-transform active:scale-95 sm:col-span-2">
-                        📥 還原備份資料
-                    </button>
-                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
-                </div>
-            </section>
-
-            <!-- 最新打卡紀錄 -->
-            <section class="bg-slate-900 border-4 border-emerald-400 rounded-3xl p-6 shadow-2xl space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl sm:text-3xl font-black text-emerald-300">
-                        🔥 最新打卡紀錄 <span id="latestCount" class="text-amber-300">(0/10)</span>
-                    </h2>
-                </div>
-                <div id="latestList" class="space-y-4">
-                    <!-- Dynamic latest items rendered here -->
-                </div>
-            </section>
-
-            <!-- 歷史紀錄倉庫 -->
-            <section class="bg-slate-900 border-4 border-purple-400 rounded-3xl p-6 shadow-2xl space-y-4">
-                <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-purple-300 flex items-center justify-between transition-transform active:scale-95">
-                    <span>📦 歷史紀錄倉庫</span>
-                    <span id="warehouseToggleText" class="text-amber-300 text-xl">[ 展開 🔽 ]</span>
-                </button>
-                
-                <div id="historyWarehouseContainer" class="hidden space-y-4 pt-4 border-t-2 border-purple-800">
-                    <p class="text-lg text-slate-300 text-center">超過 10 筆的舊回憶都在這裡，隨時可以刪除或導航！</p>
-                    <div id="historyList" class="space-y-4">
-                        <!-- Dynamic history items rendered here -->
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <footer class="text-center mt-12 text-slate-400 text-lg pb-8 space-y-3">
+        <footer class="text-center text-slate-400 text-lg pb-8 space-y-3">
             <p>❤️ 專為旅遊設計的安心足跡紀錄系統</p>
-            <button onclick="showInstallTip()" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 text-lg font-bold py-3 px-6 rounded-2xl border-2 border-cyan-500 shadow">
-                📲 如何將此網頁加入手機桌面 (App化)
-            </button>
         </footer>
     </div>
 
@@ -155,15 +183,26 @@
         // State variables
         let currentLat = null;
         let currentLng = null;
-        let latestRecords = [];
-        let historyRecords = [];
-        let pendingDeleteType = null;
+        let allRecords = [];
         let pendingDeleteIndex = null;
 
-        // Load from localStorage on startup (修改重點：啟動時只載入已儲存的紀錄，不強制觸發 GPS 去覆蓋狀態)
+        // Leaflet Map Variable
+        let map = null;
+        let mapMarker = null;
+
         window.onload = function() {
+            initMap();
             loadData();
         };
+
+        // 初始化 Leaflet 地圖
+        function initMap() {
+            // 預設高雄中心點
+            map = L.map('map').setView([22.6273, 120.3014], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; Leaflet | &copy; OpenStreetMap'
+            }).addTo(map);
+        }
 
         function showModal(text) {
             document.getElementById('msgText').innerText = text;
@@ -174,48 +213,109 @@
             document.getElementById('msgModal').classList.add('hidden');
         }
 
-        // 開啟刪除二次確認視窗
-        function confirmDeleteRecord(type, index) {
-            pendingDeleteType = type;
-            pendingDeleteIndex = index;
-            document.getElementById('deleteModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-            pendingDeleteType = null;
-            pendingDeleteIndex = null;
-        }
-
-        document.getElementById('confirmDeleteBtn').onclick = function() {
-            if (pendingDeleteType !== null && pendingDeleteIndex !== null) {
-                deleteRecord(pendingDeleteType, pendingDeleteIndex);
-            }
-            closeDeleteModal();
-        };
-
         function loadData() {
             try {
-                const savedLatest = localStorage.getItem('senior_travel_latest');
-                const savedHistory = localStorage.getItem('senior_travel_history');
-                if (savedLatest) latestRecords = JSON.parse(savedLatest);
-                if (savedHistory) historyRecords = JSON.parse(savedHistory);
+                const saved = localStorage.getItem('senior_travel_all_records');
+                if (saved) {
+                    allRecords = JSON.parse(saved);
+                } else {
+                    // 若無資料，放入預設範例
+                    const oldLatest = localStorage.getItem('senior_travel_latest');
+                    const oldHistory = localStorage.getItem('senior_travel_history');
+                    let temp = [];
+                    if (oldLatest) temp = temp.concat(JSON.parse(oldLatest));
+                    if (oldHistory) temp = temp.concat(JSON.parse(oldHistory));
+                    if (temp.length > 0) allRecords = temp;
+                }
             } catch (e) {
                 console.error("載入資料失敗", e);
             }
-            renderAll();
+            updateDropdownAndMap();
+            renderRecordList();
         }
 
         function saveData() {
             try {
-                localStorage.setItem('senior_travel_latest', JSON.stringify(latestRecords));
-                localStorage.setItem('senior_travel_history', JSON.stringify(historyRecords));
+                localStorage.setItem('senior_travel_all_records', JSON.stringify(allRecords));
             } catch (e) {
                 console.error("儲存資料失敗", e);
             }
         }
 
-        // Get GPS Location with loading animation
+        // 更新下拉選單與地圖中心
+        function updateDropdownAndMap() {
+            const selectEl = document.getElementById('locationSelect');
+            selectEl.innerHTML = '';
+
+            if (allRecords.length === 0) {
+                const option = document.createElement('option');
+                option.text = "⚠️ 尚未有打卡駐點紀錄";
+                option.value = "";
+                selectEl.add(option);
+                document.getElementById('targetDistance').innerText = "-- 公里";
+                document.getElementById('navGoBtn').href = "#";
+                return;
+            }
+
+            allRecords.forEach((item, index) => {
+                const option = document.createElement('option');
+                const isLatest = (index === 0) ? "【最新】" : "";
+                option.text = `📍 ${isLatest} ${item.desc} (${item.time})`;
+                option.value = index;
+                selectEl.add(option);
+            });
+
+            // 預設選取最新的打卡地點
+            selectEl.selectedIndex = 0;
+            onSelectLocationChange();
+        }
+
+        // 當使用者切換下拉選單
+        function onSelectLocationChange() {
+            const selectEl = document.getElementById('locationSelect');
+            const idx = selectEl.value;
+
+            if (idx === "" || !allRecords[idx]) return;
+
+            const selected = allRecords[idx];
+
+            // 1. 移動地圖至目標點並顯示波浪 Marker 氣泡
+            const lat = selected.lat;
+            const lng = selected.lng;
+            map.setView([lat, lng], 16);
+
+            if (mapMarker) {
+                map.removeLayer(mapMarker);
+            }
+            mapMarker = L.marker([lat, lng]).addTo(map)
+                .bindPopup(`📍 最新位置：${selected.desc}`)
+                .openPopup();
+
+            // 2. 更新導航按鈕連結
+            document.getElementById('navGoBtn').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+            // 3. 計算與更新距離卡片
+            updateDistanceDisplay(lat, lng);
+        }
+
+        // 更新與目標位置的距離
+        function updateDistanceDisplay(targetLat, targetLng) {
+            const distSpan = document.getElementById('targetDistance');
+            if (currentLat !== null && currentLng !== null) {
+                const dist = calculateDistance(currentLat, currentLng, targetLat, targetLng);
+                if (dist !== null) {
+                    if (dist < 1) {
+                        distSpan.innerText = `${(dist * 1000).toFixed(0)} 公尺`;
+                    } else {
+                        distSpan.innerText = `${dist.toFixed(2)} 公里`;
+                    }
+                }
+            } else {
+                distSpan.innerText = "開啟 GPS 可算距離";
+            }
+        }
+
+        // Get GPS Location
         function getGPSLocation() {
             const statusDiv = document.getElementById('gpsStatus');
             if (!navigator.geolocation) {
@@ -230,6 +330,9 @@
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
                     statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-base text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
+                    
+                    // 更新目前選取的景點距離顯示
+                    onSelectLocationChange();
                 },
                 (error) => {
                     console.error(error);
@@ -257,7 +360,7 @@
             }
 
             const now = new Date();
-            const timeString = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const timeString = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
             const newRecord = {
                 id: Date.now(),
@@ -267,29 +370,81 @@
                 time: timeString
             };
 
-            latestRecords.unshift(newRecord);
-
-            if (latestRecords.length > 10) {
-                const overflow = latestRecords.pop();
-                historyRecords.unshift(overflow);
-            }
+            // 最新打卡置頂
+            allRecords.unshift(newRecord);
 
             saveData();
-            renderAll();
+            updateDropdownAndMap();
+            renderRecordList();
             descInput.value = '';
-            showModal("🎉 打卡成功！回憶已成功儲存！");
+            showModal("🎉 打卡成功！最新駐點已更新於地圖與下拉選單！");
         }
 
-        // 一鍵複製 LINE 報平安摘要
+        // Render List
+        function renderRecordList() {
+            const container = document.getElementById('allRecordList');
+            if (allRecords.length === 0) {
+                container.innerHTML = `<div class="p-6 bg-slate-950 rounded-2xl text-center text-slate-400 text-xl">目前尚無歷史紀錄。</div>`;
+                return;
+            }
+
+            container.innerHTML = allRecords.map((item, index) => {
+                return `
+                    <div class="bg-slate-950 border-4 border-slate-800 rounded-2xl p-5 space-y-3 shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-2xl font-black text-amber-300">📌 ${escapeHtml(item.desc)}</h3>
+                            <span class="text-base bg-slate-900 text-cyan-300 px-3 py-1 rounded-xl border border-cyan-700">${item.time}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <button onclick="selectAndFocusMap(${index})" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xl font-bold py-3 px-4 rounded-xl text-center border-2 border-cyan-300 shadow">
+                                🗺️ 地圖定位
+                            </button>
+                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-xl font-bold py-3 px-5 rounded-xl border-2 border-rose-400 shadow">
+                                🗑️ 刪除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectAndFocusMap(index) {
+            document.getElementById('locationSelect').value = index;
+            onSelectLocationChange();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function confirmDeleteRecord(index) {
+            pendingDeleteIndex = index;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            pendingDeleteIndex = null;
+        }
+
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            if (pendingDeleteIndex !== null) {
+                allRecords.splice(pendingDeleteIndex, 1);
+                saveData();
+                updateDropdownAndMap();
+                renderRecordList();
+                showModal("🗑️ 該筆紀錄已刪除！");
+            }
+            closeDeleteModal();
+        };
+
+        // 一鍵複製 LINE 報平安
         function copyLineReport() {
-            if (latestRecords.length === 0 && historyRecords.length === 0) {
+            if (allRecords.length === 0) {
                 showModal("目前沒有任何打卡紀錄可以複製！");
                 return;
             }
 
             let reportText = "📍【旅遊平安回報與足跡】\n";
-            const allItems = [...latestRecords, ...historyRecords].slice(0, 5); // 取最近5筆
-            allItems.forEach((item, idx) => {
+            const items = allRecords.slice(0, 5);
+            items.forEach((item, idx) => {
                 reportText += `${idx + 1}. ${item.desc} (${item.time})\n`;
                 reportText += `   導航：https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}\n`;
             });
@@ -297,53 +452,27 @@
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(reportText).then(() => {
-                    showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人了！");
-                }).catch(() => {
-                    fallbackCopyText(reportText);
+                    showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人！");
                 });
-            } else {
-                fallbackCopyText(reportText);
             }
         }
 
-        function fallbackCopyText(text) {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人了！");
-            } catch (err) {
-                showModal("複製失敗，請手動複製。");
-            }
-            document.body.removeChild(textArea);
-        }
-
-        // 匯出備份 (下載 JSON 檔案)
+        // 備份與還原
         function exportBackup() {
-            const data = {
-                latestRecords: latestRecords,
-                historyRecords: historyRecords,
-                exportTime: new Date().toISOString()
-            };
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `travel_backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            showModal("📤 備份檔案已成功下載！請妥善保存此檔案以防換手機遺失。");
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allRecords));
+            const anchor = document.createElement('a');
+            anchor.setAttribute("href", dataStr);
+            anchor.setAttribute("download", `travel_footprint_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            showModal("📤 備份檔案已成功下載！");
         }
 
-        // 觸發還原檔案選擇
         function triggerImport() {
             document.getElementById('importFile').click();
         }
 
-        // 執行還原備份
         function importBackup(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -352,132 +481,39 @@
             reader.onload = function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
-                    if (parsed.latestRecords && parsed.historyRecords) {
-                        latestRecords = parsed.latestRecords;
-                        historyRecords = parsed.historyRecords;
-                        saveData();
-                        renderAll();
-                        showModal("📥 回憶備份還原成功！");
-                    } else {
-                        showModal("❌ 備份檔案格式不正確！");
+                    if (Array.isArray(parsed)) {
+                        allRecords = parsed;
+                    } else if (parsed.latestRecords) {
+                        allRecords = [...parsed.latestRecords, ...parsed.historyRecords];
                     }
+                    saveData();
+                    updateDropdownAndMap();
+                    renderRecordList();
+                    showModal("📥 備份資料還原成功！");
                 } catch (err) {
                     showModal("❌ 解析備份檔案失敗！");
                 }
-                event.target.value = '';
             };
             reader.readAsText(file);
         }
 
-        // 教導如何加入主畫面 (App化說明)
-        function showInstallTip() {
-            const tip = "📲 【如何將網頁變成手機App直接點開】\n\n" +
-                        "🍏 iPhone (Safari瀏覽器)：\n" +
-                        "1. 點擊下方工具列的「分享」按鈕（正方形有箭頭向上）。\n" +
-                        "2. 往下滑動點選「加入主畫面」。\n" +
-                        "3. 點擊右上角「新增」，手機桌面就會出現專屬App圖示！\n\n" +
-                        "🤖 Android (Chrome瀏覽器)：\n" +
-                        "1. 點擊右上角「三個點」選單。\n" +
-                        "2. 點選「加到主畫面」或「安裝應用程式」。\n" +
-                        "3. 確認後即可在桌面像App一樣隨時開啟！";
-            showModal(tip);
-        }
-
-        // Calculate distance in kilometers using Haversine formula
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) return null;
-            const R = 6371; // Radius of the earth in km
+            const R = 6371;
             const dLat = deg2rad(lat2 - lat1);
             const dLon = deg2rad(lon2 - lon1);
-            const a =
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            const d = R * c; // Distance in km
-            return d;
+            return R * c;
         }
 
-        function deg2rad(deg) {
-            return deg * (Math.PI/180);
-        }
-
-        // Render lists
-        function renderAll() {
-            document.getElementById('latestCount').innerText = `(${latestRecords.length}/10)`;
-            
-            const latestContainer = document.getElementById('latestList');
-            if (latestRecords.length === 0) {
-                latestContainer.innerHTML = `<div class="p-6 bg-slate-950 rounded-2xl text-center text-slate-400 text-xl">目前尚無打卡紀錄，請趕快去打卡吧！</div>`;
-            } else {
-                latestContainer.innerHTML = latestRecords.map((item, index) => renderCard(item, 'latest', index)).join('');
-            }
-
-            const historyContainer = document.getElementById('historyList');
-            if (historyRecords.length === 0) {
-                historyContainer.innerHTML = `<div class="p-6 bg-slate-950 rounded-2xl text-center text-slate-400 text-xl">倉庫中尚無歷史資料。</div>`;
-            } else {
-                historyContainer.innerHTML = historyRecords.map((item, index) => renderCard(item, 'history', index)).join('');
-            }
-        }
-
-        function renderCard(item, type, index) {
-            let distText = "計算距離中...";
-            if (currentLat !== null && currentLng !== null) {
-                const dist = calculateDistance(currentLat, currentLng, item.lat, item.lng);
-                if (dist !== null) {
-                    if (dist < 1) {
-                        distText = `距離您約 ${(dist * 1000).toFixed(0)} 公尺`;
-                    } else {
-                        distText = `距離您約 ${dist.toFixed(1)} 公里`;
-                    }
-                }
-            } else {
-                distText = "開啟GPS後可顯示距離";
-            }
-
-            return `
-                <div class="bg-slate-950 border-4 border-slate-800 rounded-2xl p-5 space-y-3 shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <h3 class="text-2xl font-black text-amber-300">📌 ${escapeHtml(item.desc)}</h3>
-                        <span class="text-base bg-slate-900 text-cyan-300 px-3 py-1 rounded-xl border border-cyan-700">${item.time}</span>
-                    </div>
-                    <div class="text-lg text-slate-300 flex items-center gap-2">
-                        <span>📍 ${distText}</span>
-                    </div>
-                    <div class="flex flex-wrap gap-3 pt-2">
-                        <a href="https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}" target="_blank" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xl font-bold py-3 px-4 rounded-xl text-center border-2 border-cyan-300 shadow flex items-center justify-center gap-2">
-                            📍 Google 導航
-                        </a>
-                        <button onclick="confirmDeleteRecord('${type}', ${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-xl font-bold py-3 px-5 rounded-xl border-2 border-rose-400 shadow">
-                            🗑️ 刪除
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
+        function deg2rad(deg) { return deg * (Math.PI/180); }
 
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Delete record
-        function deleteRecord(type, index) {
-            if (type === 'latest') {
-                latestRecords.splice(index, 1);
-                if (historyRecords.length > 0) {
-                    const promoted = historyRecords.shift();
-                    latestRecords.push(promoted);
-                }
-            } else {
-                historyRecords.splice(index, 1);
-            }
-            saveData();
-            renderAll();
-            showModal("🗑️ 該筆紀錄已刪除！");
-        }
-
-        // Toggle History Warehouse
         function toggleHistoryWarehouse() {
             const container = document.getElementById('historyWarehouseContainer');
             const toggleText = document.getElementById('warehouseToggleText');
