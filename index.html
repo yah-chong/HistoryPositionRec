@@ -20,6 +20,7 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
         .animate-spin-custom {
             display: inline-block;
             animation: spin 1s linear infinite;
@@ -159,10 +160,9 @@
         let pendingDeleteType = null;
         let pendingDeleteIndex = null;
 
-        // Load from localStorage on startup
+        // Load from localStorage on startup (修改重點：啟動時只載入已儲存的紀錄，不強制觸發 GPS 去覆蓋狀態)
         window.onload = function() {
             loadData();
-            getGPSLocation();
         };
 
         function showModal(text) {
@@ -215,7 +215,7 @@
             }
         }
 
-        // Get GPS Location with loading animation (方案5)
+        // Get GPS Location with loading animation
         function getGPSLocation() {
             const statusDiv = document.getElementById('gpsStatus');
             if (!navigator.geolocation) {
@@ -280,7 +280,7 @@
             showModal("🎉 打卡成功！回憶已成功儲存！");
         }
 
-        // 方案2：一鍵複製 LINE 報平安摘要
+        // 一鍵複製 LINE 報平安摘要
         function copyLineReport() {
             if (latestRecords.length === 0 && historyRecords.length === 0) {
                 showModal("目前沒有任何打卡紀錄可以複製！");
@@ -321,7 +321,7 @@
             document.body.removeChild(textArea);
         }
 
-        // 方案1：匯出備份 (下載 JSON 檔案)
+        // 匯出備份 (下載 JSON 檔案)
         function exportBackup() {
             const data = {
                 latestRecords: latestRecords,
@@ -338,12 +338,12 @@
             showModal("📤 備份檔案已成功下載！請妥善保存此檔案以防換手機遺失。");
         }
 
-        // 方案1：觸發還原檔案選擇
+        // 觸發還原檔案選擇
         function triggerImport() {
             document.getElementById('importFile').click();
         }
 
-        // 方案1：執行還原備份
+        // 執行還原備份
         function importBackup(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -364,12 +364,12 @@
                 } catch (err) {
                     showModal("❌ 解析備份檔案失敗！");
                 }
-                event.target.value = ''; // 清空以允許重複選取同檔案
+                event.target.value = '';
             };
             reader.readAsText(file);
         }
 
-        // 方案3：教導如何加入主畫面 (App化說明)
+        // 教導如何加入主畫面 (App化說明)
         function showInstallTip() {
             const tip = "📲 【如何將網頁變成手機App直接點開】\n\n" +
                         "🍏 iPhone (Safari瀏覽器)：\n" +
@@ -483,7 +483,7 @@
             const toggleText = document.getElementById('warehouseToggleText');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
-                toggleText.innerText = '[ 收合 34 ]'.replace('34', '🔼');
+                toggleText.innerText = '[ 收合 🔼 ]';
             } else {
                 container.classList.add('hidden');
                 toggleText.innerText = '[ 展開 🔽 ]';
