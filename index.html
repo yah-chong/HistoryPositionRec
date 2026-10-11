@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>旅遊專用足跡回憶錄與打卡系統</title>
+    <meta name="google" content="notranslate">
+    <title>旅遊專用足跡地圖與打卡系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS 地圖庫 -->
@@ -26,12 +27,29 @@
             display: inline-block;
             animation: spin 1s linear infinite;
         }
-        /* Leaflet 地圖字體與顏色微調 */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #ffffff;
             color: #000000;
             font-weight: bold;
             font-size: 1.1rem;
+        }
+        /* 沉浸式最大化地圖樣式 */
+        .fullscreen-map {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            background-color: #0b0f19;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .fullscreen-map #map {
+            flex-grow: 1 !important;
+            height: auto !important;
         }
     </style>
 </head>
@@ -46,37 +64,57 @@
             <p class="text-xl text-slate-200">輕鬆打卡、地圖回顧、一鍵導航</p>
         </header>
 
-        <!-- 圖片風格之地圖檢視專區 (卡片式呈現) -->
-        <section class="bg-slate-900 border-4 border-slate-700 rounded-3xl p-5 shadow-2xl space-y-4">
+        <!-- 需求 1：GPS 取得位置移到最上方 -->
+        <section class="bg-slate-900 border-4 border-blue-400 rounded-3xl p-6 shadow-2xl space-y-4">
+            <h2 class="text-2xl sm:text-3xl font-black text-blue-300 flex items-center gap-2">
+                📡 第一步：取得目前 GPS 位置
+            </h2>
+            <div>
+                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
+                    📡 開啟 GPS 並取得目前位置
+                </button>
+                <div id="gpsStatus" class="mt-3 text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
+                    ⚠️ 尚未取得 GPS 定位
+                </div>
+            </div>
+        </section>
+
+        <!-- 地圖與導航檢視專區 (支援最大化) -->
+        <section id="mapSectionContainer" class="bg-slate-900 border-4 border-slate-700 rounded-3xl p-5 shadow-2xl space-y-4 transition-all">
             
-            <!-- 1. 選擇打卡駐點足跡下拉選單 -->
-            <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-md border-2 border-slate-300">
-                <label for="locationSelect" class="block text-xl font-bold mb-2 flex items-center gap-2">
-                    📍 選擇打卡駐點足跡：
-                </label>
-                <div class="relative">
-                    <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-3 text-xl focus:outline-none focus:ring-4 focus:ring-blue-300">
-                        <!-- 選項會透過 JavaScript 自動動態載入 -->
+            <!-- 頂部控制列：包含選單與最大化按鈕 -->
+            <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <!-- 選擇打卡駐點足跡下拉選單 -->
+                <div class="bg-white text-gray-900 rounded-2xl p-3 shadow-md border-2 border-slate-300 w-full flex-grow">
+                    <label for="locationSelect" class="block text-lg font-bold mb-1 flex items-center gap-2">
+                        📍 選擇打卡駐點足跡：
+                    </label>
+                    <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-2 text-lg focus:outline-none">
+                        <!-- 動態載入 -->
                     </select>
+                </div>
+                <!-- 放大/還原按鈕 (需求3) -->
+                <button onclick="toggleMapFullscreen()" id="expandMapBtn" class="w-full sm:w-auto bg-purple-700 hover:bg-purple-600 text-white font-bold py-3 px-5 rounded-2xl border-2 border-purple-300 shadow flex items-center justify-center gap-2 text-lg whitespace-nowrap">
+                    🔍 放大地圖
+                </button>
+            </div>
+
+            <!-- 需求 2：距離顯示移到下一行，排版獨立 -->
+            <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-md border-l-8 border-emerald-600 space-y-1">
+                <div class="text-lg font-black text-emerald-900">
+                    📍 您與目標位置距離：
+                </div>
+                <div id="targetDistance" class="text-3xl font-black text-emerald-800 tracking-wider">
+                    -- 公里
                 </div>
             </div>
 
-            <!-- 2. 與目標位置距離卡片 -->
-            <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-md border-l-8 border-emerald-600 flex justify-between items-center">
-                <span class="text-xl font-black flex items-center gap-2">
-                    📍 您與目標位置距離：
-                </span>
-                <span id="targetDistance" class="text-2xl font-black text-emerald-800">
-                    -- 公里
-                </span>
-            </div>
-
-            <!-- 3. Leaflet 地圖顯示區域 -->
+            <!-- Leaflet 地圖顯示區域 -->
             <div class="rounded-2xl overflow-hidden border-4 border-slate-700 shadow-inner">
                 <div id="map" class="w-full h-80 z-0"></div>
             </div>
 
-            <!-- 4. 出發導航綠色按鈕 -->
+            <!-- 出發導航綠色按鈕 -->
             <div>
                 <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-3 text-center transition-transform active:scale-95">
                     🚗 出發 GO GO GO (開啟導航 Google 地圖)
@@ -91,28 +129,16 @@
                 ✍️ 新增旅遊駐點打卡
             </h2>
 
-            <!-- Step 1: GPS Button -->
-            <div>
-                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
-                    📡 1. 開啟 GPS 並取得目前位置
-                </button>
-                <div id="gpsStatus" class="mt-3 text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
-                    ⚠️ 尚未取得 GPS 定位
-                </div>
-            </div>
-
-            <!-- Step 2: Location description input -->
             <div class="space-y-2">
                 <label for="locDesc" class="block text-xl font-bold text-slate-200">
-                    ✍️ 2. 輸入位置說明 (例如: 鳳山青年夜市 / 杉林衛生所)
+                    ✍️ 輸入位置說明 (例如: 鳳山青年夜市 / 杉林衛生所)
                 </label>
                 <input type="text" id="locDesc" placeholder="請點此輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-2xl placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-300">
             </div>
 
-            <!-- Step 3: Save button -->
             <div>
                 <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-5 px-6 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-3 transition-transform active:scale-95">
-                    💾 3. 上傳 / 儲存打卡紀錄
+                    💾 儲存目前 GPS 與位置打卡
                 </button>
             </div>
         </section>
@@ -180,28 +206,42 @@
     </div>
 
     <script>
-        // State variables
         let currentLat = null;
         let currentLng = null;
         let allRecords = [];
         let pendingDeleteIndex = null;
-
-        // Leaflet Map Variable
         let map = null;
         let mapMarker = null;
+        let isFullscreenMap = false;
 
         window.onload = function() {
             initMap();
             loadData();
         };
 
-        // 初始化 Leaflet 地圖
         function initMap() {
-            // 預設高雄中心點
             map = L.map('map').setView([22.6273, 120.3014], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; Leaflet | &copy; OpenStreetMap'
             }).addTo(map);
+        }
+
+        // 需求 3：地圖最大化與還原切換
+        function toggleMapFullscreen() {
+            const container = document.getElementById('mapSectionContainer');
+            const btn = document.getElementById('expandMapBtn');
+            
+            if (!isFullscreenMap) {
+                container.classList.add('fullscreen-map');
+                btn.innerHTML = "❌ 關閉放大";
+                isFullscreenMap = true;
+            } else {
+                container.classList.remove('fullscreen-map');
+                btn.innerHTML = "🔍 放大地圖";
+                isFullscreenMap = false;
+            }
+            // 觸發地圖重新調整尺寸以防變形
+            setTimeout(() => { map.invalidateSize(); }, 200);
         }
 
         function showModal(text) {
@@ -219,7 +259,6 @@
                 if (saved) {
                     allRecords = JSON.parse(saved);
                 } else {
-                    // 若無資料，放入預設範例
                     const oldLatest = localStorage.getItem('senior_travel_latest');
                     const oldHistory = localStorage.getItem('senior_travel_history');
                     let temp = [];
@@ -242,7 +281,6 @@
             }
         }
 
-        // 更新下拉選單與地圖中心
         function updateDropdownAndMap() {
             const selectEl = document.getElementById('locationSelect');
             selectEl.innerHTML = '';
@@ -265,12 +303,10 @@
                 selectEl.add(option);
             });
 
-            // 預設選取最新的打卡地點
             selectEl.selectedIndex = 0;
             onSelectLocationChange();
         }
 
-        // 當使用者切換下拉選單
         function onSelectLocationChange() {
             const selectEl = document.getElementById('locationSelect');
             const idx = selectEl.value;
@@ -278,8 +314,6 @@
             if (idx === "" || !allRecords[idx]) return;
 
             const selected = allRecords[idx];
-
-            // 1. 移動地圖至目標點並顯示波浪 Marker 氣泡
             const lat = selected.lat;
             const lng = selected.lng;
             map.setView([lat, lng], 16);
@@ -288,17 +322,14 @@
                 map.removeLayer(mapMarker);
             }
             mapMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`📍 最新位置：${selected.desc}`)
+                .bindPopup(`📍 駐點位置：${selected.desc}`)
                 .openPopup();
 
-            // 2. 更新導航按鈕連結
             document.getElementById('navGoBtn').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-
-            // 3. 計算與更新距離卡片
             updateDistanceDisplay(lat, lng);
+            setTimeout(() => { map.invalidateSize(); }, 150);
         }
 
-        // 更新與目標位置的距離
         function updateDistanceDisplay(targetLat, targetLng) {
             const distSpan = document.getElementById('targetDistance');
             if (currentLat !== null && currentLng !== null) {
@@ -311,11 +342,10 @@
                     }
                 }
             } else {
-                distSpan.innerText = "開啟 GPS 可算距離";
+                distSpan.innerText = "尚未取得 GPS 定位";
             }
         }
 
-        // Get GPS Location
         function getGPSLocation() {
             const statusDiv = document.getElementById('gpsStatus');
             if (!navigator.geolocation) {
@@ -330,8 +360,6 @@
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
                     statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-base text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
-                    
-                    // 更新目前選取的景點距離顯示
                     onSelectLocationChange();
                 },
                 (error) => {
@@ -343,18 +371,17 @@
             );
         }
 
-        // Save Check-in
         function saveCheckIn() {
             const descInput = document.getElementById('locDesc');
             const desc = descInput.value.trim();
 
             if (currentLat === null || currentLng === null) {
-                showModal("請先點擊「開啟 GPS 並取得目前位置」！");
+                showModal("請先點擊上方的「開啟 GPS 並取得目前位置」！");
                 return;
             }
 
             if (!desc) {
-                showModal("請輸入位置說明（例如：鳳山青年夜市）！");
+                showModal("請輸入位置說明（例如：杉林衛生所）！");
                 descInput.focus();
                 return;
             }
@@ -370,17 +397,14 @@
                 time: timeString
             };
 
-            // 最新打卡置頂
             allRecords.unshift(newRecord);
-
             saveData();
             updateDropdownAndMap();
             renderRecordList();
             descInput.value = '';
-            showModal("🎉 打卡成功！最新駐點已更新於地圖與下拉選單！");
+            showModal("🎉 打卡成功！最新駐點已更新！");
         }
 
-        // Render List
         function renderRecordList() {
             const container = document.getElementById('allRecordList');
             if (allRecords.length === 0) {
@@ -411,7 +435,8 @@
         function selectAndFocusMap(index) {
             document.getElementById('locationSelect').value = index;
             onSelectLocationChange();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (isFullscreenMap) toggleMapFullscreen(); // 若在地圖放大模式下點擊清單，自動切回正常視圖
+            window.scrollTo({ top: 150, behavior: 'smooth' });
         }
 
         function confirmDeleteRecord(index) {
@@ -435,7 +460,6 @@
             closeDeleteModal();
         };
 
-        // 一鍵複製 LINE 報平安
         function copyLineReport() {
             if (allRecords.length === 0) {
                 showModal("目前沒有任何打卡紀錄可以複製！");
@@ -457,7 +481,6 @@
             }
         }
 
-        // 備份與還原
         function exportBackup() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allRecords));
             const anchor = document.createElement('a');
