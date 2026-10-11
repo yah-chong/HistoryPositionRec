@@ -21,8 +21,11 @@
 <body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
 
     <div class="max-w-2xl mx-auto">
+        <!-- 調整為同一行顯示，並加上 whitespace-nowrap 或縮小一點在小螢幕的字體以防換行 -->
         <header class="text-center mb-8 bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl">
-            <h1 class="text-3xl sm:text-4xl font-black text-amber-300 mb-2">🌟 旅遊專用足跡回憶錄</h1>
+            <h1 class="text-2xl sm:text-4xl font-black text-amber-300 mb-2 whitespace-nowrap flex items-center justify-center gap-2">
+                <span>🌟</span> <span>旅遊專用足跡回憶錄</span>
+            </h1>
             <p class="text-xl text-slate-200">輕鬆打卡、自動計算距離、一鍵導航回憶</p>
         </header>
 
@@ -33,6 +36,21 @@
                 <button onclick="closeModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-4 rounded-2xl shadow-lg border-2 border-emerald-400">
                     確定知道了 👍
                 </button>
+            </div>
+        </div>
+
+        <!-- Delete Confirm Modal (二次確認刪除視窗) -->
+        <div id="deleteModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-6">
+                <p class="text-2xl font-bold text-rose-300">⚠️ 請問確定要刪除這筆回憶紀錄嗎？</p>
+                <div class="flex gap-4">
+                    <button onclick="closeDeleteModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-slate-500">
+                        取消
+                    </button>
+                    <button id="confirmDeleteBtn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-rose-400">
+                        確定刪除 🗑️
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -105,6 +123,8 @@
         let currentLng = null;
         let latestRecords = [];
         let historyRecords = [];
+        let pendingDeleteType = null;
+        let pendingDeleteIndex = null;
 
         // Load from localStorage on startup
         window.onload = function() {
@@ -121,6 +141,27 @@
         function closeModal() {
             document.getElementById('msgModal').classList.add('hidden');
         }
+
+        // 開啟刪除二次確認視窗
+        function confirmDeleteRecord(type, index) {
+            pendingDeleteType = type;
+            pendingDeleteIndex = index;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            pendingDeleteType = null;
+            pendingDeleteIndex = null;
+        }
+
+        // 綁定確認刪除按鈕事件
+        document.getElementById('confirmDeleteBtn').onclick = function() {
+            if (pendingDeleteType !== null && pendingDeleteIndex !== null) {
+                deleteRecord(pendingDeleteType, pendingDeleteIndex);
+            }
+            closeDeleteModal();
+        };
 
         function loadData() {
             try {
@@ -276,7 +317,7 @@
                         <a href="https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}" target="_blank" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-xl font-bold py-3 px-4 rounded-xl text-center border-2 border-cyan-300 shadow flex items-center justify-center gap-2">
                             📍 Google 導航
                         </a>
-                        <button onclick="deleteRecord('${type}', ${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-xl font-bold py-3 px-5 rounded-xl border-2 border-rose-400 shadow">
+                        <button onclick="confirmDeleteRecord('${type}', ${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-xl font-bold py-3 px-5 rounded-xl border-2 border-rose-400 shadow">
                             🗑️ 刪除
                         </button>
                     </div>
