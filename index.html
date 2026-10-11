@@ -16,12 +16,20 @@
         button, input {
             min-height: 56px;
         }
+        /* 旋轉動畫 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        .animate-spin-custom {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
 
     <div class="max-w-2xl mx-auto">
-        <!-- 調整為同一行顯示，並加上 whitespace-nowrap 或縮小一點在小螢幕的字體以防換行 -->
+        <!-- 標題同一行顯示 -->
         <header class="text-center mb-8 bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl">
             <h1 class="text-2xl sm:text-4xl font-black text-amber-300 mb-2 whitespace-nowrap flex items-center justify-center gap-2">
                 <span>🌟</span> <span>旅遊專用足跡回憶錄</span>
@@ -55,6 +63,7 @@
         </div>
 
         <main class="space-y-8">
+            <!-- 新增打卡區塊 -->
             <section class="bg-slate-900 border-4 border-cyan-400 rounded-3xl p-6 shadow-2xl space-y-6">
                 <h2 class="text-2xl sm:text-3xl font-black text-cyan-300 flex items-center gap-2">
                     📍 新增旅遊駐點打卡
@@ -86,6 +95,26 @@
                 </div>
             </section>
 
+            <!-- 報平安與備份功能區塊 -->
+            <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 shadow-2xl space-y-4">
+                <h2 class="text-2xl sm:text-3xl font-black text-amber-300 flex items-center gap-2">
+                    🛠️ 旅遊便利小工具
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-amber-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                        📋 複製 LINE 報平安足跡
+                    </button>
+                    <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-indigo-300 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                        📤 備份回憶資料
+                    </button>
+                    <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-xl font-bold py-4 px-4 rounded-2xl shadow-lg border-2 border-violet-300 flex items-center justify-center gap-2 transition-transform active:scale-95 sm:col-span-2">
+                        📥 還原備份資料
+                    </button>
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
+                </div>
+            </section>
+
+            <!-- 最新打卡紀錄 -->
             <section class="bg-slate-900 border-4 border-emerald-400 rounded-3xl p-6 shadow-2xl space-y-4">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl sm:text-3xl font-black text-emerald-300">
@@ -97,6 +126,7 @@
                 </div>
             </section>
 
+            <!-- 歷史紀錄倉庫 -->
             <section class="bg-slate-900 border-4 border-purple-400 rounded-3xl p-6 shadow-2xl space-y-4">
                 <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-2xl font-black py-4 px-6 rounded-2xl shadow-xl border-4 border-purple-300 flex items-center justify-between transition-transform active:scale-95">
                     <span>📦 歷史紀錄倉庫</span>
@@ -112,8 +142,11 @@
             </section>
         </main>
 
-        <footer class="text-center mt-12 text-slate-400 text-lg pb-8">
+        <footer class="text-center mt-12 text-slate-400 text-lg pb-8 space-y-3">
             <p>❤️ 專為旅遊設計的安心足跡紀錄系統</p>
+            <button onclick="showInstallTip()" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 text-lg font-bold py-3 px-6 rounded-2xl border-2 border-cyan-500 shadow">
+                📲 如何將此網頁加入手機桌面 (App化)
+            </button>
         </footer>
     </div>
 
@@ -129,7 +162,6 @@
         // Load from localStorage on startup
         window.onload = function() {
             loadData();
-            // Automatically try to get GPS on load for convenience
             getGPSLocation();
         };
 
@@ -155,7 +187,6 @@
             pendingDeleteIndex = null;
         }
 
-        // 綁定確認刪除按鈕事件
         document.getElementById('confirmDeleteBtn').onclick = function() {
             if (pendingDeleteType !== null && pendingDeleteIndex !== null) {
                 deleteRecord(pendingDeleteType, pendingDeleteIndex);
@@ -184,7 +215,7 @@
             }
         }
 
-        // Get GPS Location
+        // Get GPS Location with loading animation (方案5)
         function getGPSLocation() {
             const statusDiv = document.getElementById('gpsStatus');
             if (!navigator.geolocation) {
@@ -193,7 +224,7 @@
                 return;
             }
 
-            statusDiv.innerHTML = "📡 正在收尋衛星定位中，請稍候...";
+            statusDiv.innerHTML = `<span class="animate-spin-custom">📡</span> 正在搜尋衛星定位中，請稍候...`;
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     currentLat = position.coords.latitude;
@@ -236,10 +267,8 @@
                 time: timeString
             };
 
-            // Add to latest records
             latestRecords.unshift(newRecord);
 
-            // If latest exceeds 10, shift excess to history warehouse
             if (latestRecords.length > 10) {
                 const overflow = latestRecords.pop();
                 historyRecords.unshift(overflow);
@@ -249,6 +278,109 @@
             renderAll();
             descInput.value = '';
             showModal("🎉 打卡成功！回憶已成功儲存！");
+        }
+
+        // 方案2：一鍵複製 LINE 報平安摘要
+        function copyLineReport() {
+            if (latestRecords.length === 0 && historyRecords.length === 0) {
+                showModal("目前沒有任何打卡紀錄可以複製！");
+                return;
+            }
+
+            let reportText = "📍【旅遊平安回報與足跡】\n";
+            const allItems = [...latestRecords, ...historyRecords].slice(0, 5); // 取最近5筆
+            allItems.forEach((item, idx) => {
+                reportText += `${idx + 1}. ${item.desc} (${item.time})\n`;
+                reportText += `   導航：https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}\n`;
+            });
+            reportText += "家人們不用擔心，我目前平安順利！❤️";
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(reportText).then(() => {
+                    showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人了！");
+                }).catch(() => {
+                    fallbackCopyText(reportText);
+                });
+            } else {
+                fallbackCopyText(reportText);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人了！");
+            } catch (err) {
+                showModal("複製失敗，請手動複製。");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // 方案1：匯出備份 (下載 JSON 檔案)
+        function exportBackup() {
+            const data = {
+                latestRecords: latestRecords,
+                historyRecords: historyRecords,
+                exportTime: new Date().toISOString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `travel_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showModal("📤 備份檔案已成功下載！請妥善保存此檔案以防換手機遺失。");
+        }
+
+        // 方案1：觸發還原檔案選擇
+        function triggerImport() {
+            document.getElementById('importFile').click();
+        }
+
+        // 方案1：執行還原備份
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.latestRecords && parsed.historyRecords) {
+                        latestRecords = parsed.latestRecords;
+                        historyRecords = parsed.historyRecords;
+                        saveData();
+                        renderAll();
+                        showModal("📥 回憶備份還原成功！");
+                    } else {
+                        showModal("❌ 備份檔案格式不正確！");
+                    }
+                } catch (err) {
+                    showModal("❌ 解析備份檔案失敗！");
+                }
+                event.target.value = ''; // 清空以允許重複選取同檔案
+            };
+            reader.readAsText(file);
+        }
+
+        // 方案3：教導如何加入主畫面 (App化說明)
+        function showInstallTip() {
+            const tip = "📲 【如何將網頁變成手機App直接點開】\n\n" +
+                        "🍏 iPhone (Safari瀏覽器)：\n" +
+                        "1. 點擊下方工具列的「分享」按鈕（正方形有箭頭向上）。\n" +
+                        "2. 往下滑動點選「加入主畫面」。\n" +
+                        "3. 點擊右上角「新增」，手機桌面就會出現專屬App圖示！\n\n" +
+                        "🤖 Android (Chrome瀏覽器)：\n" +
+                        "1. 點擊右上角「三個點」選單。\n" +
+                        "2. 點選「加到主畫面」或「安裝應用程式」。\n" +
+                        "3. 確認後即可在桌面像App一樣隨時開啟！";
+            showModal(tip);
         }
 
         // Calculate distance in kilometers using Haversine formula
@@ -333,7 +465,6 @@
         function deleteRecord(type, index) {
             if (type === 'latest') {
                 latestRecords.splice(index, 1);
-                // If history has items, pop the oldest from history and shift to latest to keep 10 items in latest if possible
                 if (historyRecords.length > 0) {
                     const promoted = historyRecords.shift();
                     latestRecords.push(promoted);
@@ -352,7 +483,7 @@
             const toggleText = document.getElementById('warehouseToggleText');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
-                toggleText.innerText = '[ 收合 🔼 ]';
+                toggleText.innerText = '[ 收合 34 ]'.replace('34', '🔼');
             } else {
                 container.classList.add('hidden');
                 toggleText.innerText = '[ 展開 🔽 ]';
