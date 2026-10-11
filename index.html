@@ -67,17 +67,14 @@
             </select>
         </div>
 
-        <!-- 目標距離顯示 (置中對齊) -->
-        <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-xl border-4 border-emerald-500 space-y-1 text-center">
-            <div class="text-base sm:text-lg font-black text-emerald-900">
-                📍 您與目標位置距離：
-            </div>
-            <div id="targetDistance" class="text-2xl sm:text-3xl font-black text-emerald-800 tracking-wider">
-                -- 公里
+        <!-- 目標距離顯示 (精簡化、單行最大化、置中對齊) -->
+        <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-xl border-4 border-emerald-500 text-center space-y-1">
+            <div id="targetDistance" class="text-2xl sm:text-4xl font-black text-emerald-800 tracking-wider whitespace-nowrap overflow-hidden text-ellipsis">
+                距離目標：-- 公里
             </div>
         </div>
 
-        <!-- 巨大化地圖顯示區域 (完全拿掉外框，佔滿螢幕 70vh 以上) -->
+        <!-- 巨大化地圖顯示區域 (無框、高佔比 72vh) -->
         <div class="w-full h-[72vh] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 z-0">
             <div id="map" class="w-full h-full"></div>
         </div>
@@ -174,7 +171,8 @@
         let allRecords = [];
         let pendingDeleteIndex = null;
         let map = null;
-        let mapMarker = null;
+        let myMarker = null;       // 我的定位標記 (藍色)
+        let targetMarker = null;   // 目標駐點標記 (紅色)
 
         window.onload = function() {
             initMap();
@@ -234,7 +232,7 @@
                 option.text = "⚠️ 尚未有打卡駐點紀錄";
                 option.value = "";
                 selectEl.add(option);
-                document.getElementById('targetDistance').innerText = "-- 公里";
+                document.getElementById('targetDistance').innerText = "距離目標：尚無紀錄";
                 document.getElementById('navGoBtn').href = "#";
                 return;
             }
@@ -251,6 +249,40 @@
             onSelectLocationChange();
         }
 
+        // 同時在地圖上顯示「我的定位」與「選取的打卡駐點」
+        function updateMapMarkers(targetLat, targetLng, targetDesc) {
+            // 移除舊的標記
+            if (myMarker) map.removeLayer(myMarker);
+            if (targetMarker) map.removeLayer(targetMarker);
+
+            let groupLayers = [];
+
+            // 1. 如果有取得目前 GPS，加上我的定位標記 (藍色圖示或預設)
+            if (currentLat !== null && currentLng !== null) {
+                myMarker = L.marker([currentLat, currentLng]).addTo(map)
+                    .bindPopup("📍 您的目前位置");
+                groupLayers.push([currentLat, currentLng]);
+            }
+
+            // 2. 加入選取的打卡駐點標記
+            if (targetLat !== null && targetLng !== null) {
+                targetMarker = L.marker([targetLat, targetLng]).addTo(map)
+                    .bindPopup(`📍 選擇的駐點：${targetDesc}`)
+                    .openPopup();
+                groupLayers.push([targetLat, targetLng]);
+            }
+
+            // 3. 自動調整地圖視野同時涵蓋雙方位置
+            if (groupLayers.length > 1) {
+                const bounds = L.latLngBounds(groupLayers);
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+            } else if (groupLayers.length === 1) {
+                map.setView(groupLayers[0], 16);
+            }
+
+            setTimeout(() => { map.invalidateSize(); }, 150);
+        }
+
         function onSelectLocationChange() {
             const selectEl = document.getElementById('locationSelect');
             const idx = selectEl.value;
@@ -260,18 +292,13 @@
             const selected = allRecords[idx];
             const lat = selected.lat;
             const lng = selected.lng;
-            map.setView([lat, lng], 16);
 
-            if (mapMarker) {
-                map.removeLayer(mapMarker);
-            }
-            mapMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`📍 駐點位置：${selected.desc}`)
-                .openPopup();
-
+            // 更新導航連結
             document.getElementById('navGoBtn').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+            // 更新距離與地圖雙標記
             updateDistanceDisplay(lat, lng);
-            setTimeout(() => { map.invalidateSize(); }, 150);
+            updateMapMarkers(lat, lng, selected.desc);
         }
 
         function updateDistanceDisplay(targetLat, targetLng) {
@@ -280,13 +307,13 @@
                 const dist = calculateDistance(currentLat, currentLng, targetLat, targetLng);
                 if (dist !== null) {
                     if (dist < 1) {
-                        distSpan.innerText = `${(dist * 1000).toFixed(0)} 公尺`;
+                        distSpan.innerText = `距離目標：${(dist * 1000).toFixed(0)} 公尺`;
                     } else {
-                        distSpan.innerText = `${dist.toFixed(2)} 公里`;
+                        distSpan.innerText = `距離目標：${dist.toFixed(2)} 公里`;
                     }
                 }
             } else {
-                distSpan.innerText = "尚未取得 GPS 定位";
+                distSpan.innerText = "距離目標：尚未取得 GPS 定位";
             }
         }
 
@@ -304,6 +331,8 @@
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
                     statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-base text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
+                    
+                    // 取得定位後立即重新整理地圖雙標記與距離
                     onSelectLocationChange();
                 },
                 (error) => {
