@@ -45,14 +45,29 @@
             </h1>
         </header>
 
-        <!-- GPS 定位區塊 (藍框) -->
-        <section class="bg-slate-900 border-4 border-blue-400 rounded-3xl p-5 shadow-2xl space-y-4">
+        <!-- GPS 定位與新增打卡區塊 (藍框) -->
+        <section class="bg-slate-900 border-4 border-blue-400 rounded-3xl p-5 shadow-2xl space-y-5">
             <div>
                 <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl sm:text-2xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
                     📡 開啟 GPS 並取得目前位置
                 </button>
                 <div id="gpsStatus" class="mt-3 text-lg sm:text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
                     ⚠️ 尚未取得 GPS 定位
+                </div>
+            </div>
+
+            <!-- 新增旅遊駐點打卡 (緊接在 GPS 定位按鈕後方) -->
+            <div class="pt-4 border-t-2 border-slate-700 space-y-3">
+                <h2 class="text-xl sm:text-2xl font-black text-cyan-300">
+                    ✍️ 新增旅遊駐點打卡
+                </h2>
+                <div>
+                    <input type="text" id="locDesc" placeholder="請輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-xl placeholder-slate-500 focus:outline-none">
+                </div>
+                <div>
+                    <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
+                        💾 儲存目前位置打卡
+                    </button>
                 </div>
             </div>
         </section>
@@ -91,23 +106,6 @@
         <div class="w-full h-[72vh] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 z-0">
             <div id="map" class="w-full h-full"></div>
         </div>
-
-        <!-- 新增打卡區塊 -->
-        <section class="bg-slate-900 border-4 border-cyan-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <h2 class="text-xl sm:text-2xl font-black text-cyan-300">
-                ✍️ 新增旅遊駐點打卡
-            </h2>
-
-            <div class="space-y-2">
-                <input type="text" id="locDesc" placeholder="請輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-xl placeholder-slate-500 focus:outline-none">
-            </div>
-
-            <div>
-                <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
-                    💾 儲存目前位置打卡
-                </button>
-            </div>
-        </section>
 
         <!-- 報平安與備份小工具區塊 -->
         <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 shadow-2xl space-y-4">
@@ -356,7 +354,7 @@
                 lat: currentLat,
                 lng: currentLng,
                 time: timeString,
-                timestamp: now.getTime() // 記錄真實毫秒數以便過濾天數
+                timestamp: now.getTime()
             };
 
             allRecords.unshift(newRecord);
@@ -436,7 +434,6 @@
                 const limitMillis = daysLimit * 24 * 60 * 60 * 1000;
 
                 filteredItems = allRecords.filter(item => {
-                    // 若舊資料沒有 timestamp，則退回用陣列順序或當成符合處理，新資料有 timestamp 則精確過濾
                     if (!item.timestamp) return true; 
                     return (nowTime - item.timestamp) <= limitMillis;
                 });
