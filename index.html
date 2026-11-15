@@ -1,496 +1,936 @@
 <!DOCTYPE html>
-<html lang="zh-TW" translate="no">
+<html lang="zh-Hant" translate="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google" content="notranslate">
-    <title>旅遊專用足跡與打卡系統</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS & JS 地圖庫 -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body {
-            background-color: #0b0f19;
-            color: #ffffff;
-            font-size: 1.25rem;
-        }
-        button, input, select {
-            min-height: 56px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .animate-spin-custom {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background-color: #ffffff;
-            color: #000000;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#000000">
+<title>旅遊專用足跡與打卡系統</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{
+    margin:0;height:100%;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    overflow:hidden;background:#000;color:#fff;
+  }
+  .hidden{display:none!important}
+
+  /* 全螢幕地圖 */
+  #map{position:fixed;inset:0;background:#000;z-index:1}
+
+  /* 頂部資訊與操作列 (整合打卡駐點選單與出發導航按鈕) */
+  #topbar{
+    position:fixed;top:0;left:0;right:0;z-index:1000;
+    display:flex;flex-direction:column;gap:8px;
+    padding:10px 12px 14px;
+    padding-top:calc(10px + env(safe-area-inset-top));
+    background:linear-gradient(to bottom, rgba(0,0,0,0.92) 75%, rgba(0,0,0,0));
+    pointer-events:none;
+  }
+  #topbar > * { pointer-events:auto; }
+
+  .top-status-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  }
+  .chip{
+    background:#111;color:#fff;border-radius:10px;padding:7px 11px;font-size:15px;font-weight:900;
+    display:flex;align-items:center;gap:6px;border:2px solid #555;white-space:nowrap;
+  }
+  #gpsDot{width:11px;height:11px;border-radius:50%;background:#ff3d00;flex-shrink:0;transition:.3s;}
+  #gpsDot.on{background:#00e676;box-shadow:0 0 8px #00e676;}
+  #distChip{border-color:#00e676;background:#072413;color:#00e676;}
+  #distChip b{color:#ffeb3b;font-size:16px;}
+
+  /* 打卡駐點足跡 + 出發導航 並排卡片 */
+  .spot-nav-bar{
+    display:flex;align-items:stretch;gap:8px;
+    background:#121212;border:2.5px solid #ffeb3b;border-radius:14px;padding:6px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.85);
+  }
+  #locationSelect{
+    flex:1;min-width:0;background:#1e1e1e;color:#ffeb3b;border:2px solid #555;
+    border-radius:10px;padding:10px 10px;font-size:17px;font-weight:900;outline:none;
+  }
+  #locationSelect:focus{border-color:#ffeb3b;}
+  #navGoBtn{
+    background:#00e676;color:#000;border:none;border-radius:10px;
+    padding:0 16px;font-size:17px;font-weight:900;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;
+    box-shadow:0 3px 10px rgba(0,230,118,0.35);transition:.15s;flex-shrink:0;
+  }
+  #navGoBtn:active{transform:scale(0.95);background:#00c853;}
+
+  /* 右側懸浮控制按鈕組 */
+  .control-group{
+    position:fixed;right:12px;top:52%;transform:translateY(-50%);z-index:1000;
+    display:flex;flex-direction:column;gap:9px;align-items:flex-end;
+  }
+  .ctrl-btn{
+    width:58px;height:58px;border-radius:50%;border:3px solid #fff;
+    background:#111;color:#fff;font-size:19px;font-weight:900;cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,0.8);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1.15;transition:.15s;
+  }
+  .ctrl-btn:active{transform:scale(0.93);}
+  .ctrl-btn span{font-size:11px;margin-top:1px;}
+
+  #checkinOpenBtn{background:#00e676;color:#000;border-color:#fff;}
+  #gpsTrackBtn.following{background:#2979ff;color:#fff;border-color:#fff;}
+  #lineReportBtn{background:#06c755;color:#fff;border-color:#fff;}
+  #historyOpenBtn{background:#ffb300;color:#000;border-color:#fff;}
+  #toolsOpenBtn{background:#7c4dff;color:#fff;border-color:#fff;}
+
+  /* 底部目前選中駐點資訊膠囊 */
+  #bottomSpotBanner{
+    position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:1000;
+    background:rgba(14,14,14,0.96);border:2.5px solid #448aff;border-radius:16px;
+    padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.9);
+  }
+  .banner-info{flex:1;min-width:0;}
+  .banner-title{font-size:18px;font-weight:900;color:#ffeb3b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .banner-sub{font-size:14px;font-weight:bold;color:#00e676;margin-top:3px;}
+  .banner-focus-btn{
+    background:#2979ff;color:#fff;border:none;border-radius:10px;padding:10px 14px;
+    font-size:15px;font-weight:900;cursor:pointer;white-space:nowrap;flex-shrink:0;
+  }
+  .banner-focus-btn:active{transform:scale(0.95);}
+
+  /* 滿版功能彈出視窗 */
+  .modal-backdrop{
+    position:fixed;inset:0;z-index:2000;background:#0a0a0a;
+    display:flex;flex-direction:column;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+    padding-top:calc(14px + env(safe-area-inset-top));
+    overflow-y:auto;
+  }
+  .modal-card{
+    max-width:560px;width:100%;height:100%;margin:0 auto;
+    display:flex;flex-direction:column;gap:14px;
+  }
+  .modal-header{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border-bottom:2px solid #333;padding-bottom:10px;
+  }
+  .modal-header h2{margin:0;font-size:23px;font-weight:900;color:#ffeb3b;}
+
+  .input-large{
+    width:100%;padding:15px;border-radius:12px;border:2.5px solid #666;
+    background:#1c1c1c;color:#fff;font-size:20px;font-weight:bold;outline:none;
+  }
+  .input-large:focus{border-color:#ffeb3b;background:#000;}
+
+  .action-btn{
+    width:100%;padding:16px;border:none;border-radius:12px;font-size:20px;font-weight:900;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;
+  }
+  .action-btn:active{transform:scale(0.97);}
+  .btn-green{background:#00e676;color:#000;}
+  .btn-amber{background:#ffeb3b;color:#000;}
+  .btn-blue{background:#2979ff;color:#fff;}
+  .btn-purple{background:#7c4dff;color:#fff;}
+  .btn-red{background:#ff1744;color:#fff;}
+
+  .close-modal-btn{
+    background:#262626;color:#fff;border:2px solid #777;padding:15px;border-radius:12px;
+    font-weight:900;font-size:19px;cursor:pointer;text-align:center;margin-top:auto;
+  }
+  .close-modal-btn:active{background:#444;}
+
+  /* 紀錄清單卡片 */
+  .record-list{
+    flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .record-card{
+    background:#181818;border-left:6px solid #ffeb3b;border-radius:12px;
+    padding:14px 12px;display:flex;flex-direction:column;gap:8px;
+  }
+  .record-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .record-title{font-size:20px;font-weight:900;color:#fff;word-break:break-word;}
+  .record-time{
+    background:#262626;color:#82b1ff;border:1px solid #448aff;
+    font-size:14px;font-weight:bold;padding:3px 9px;border-radius:8px;white-space:nowrap;flex-shrink:0;
+  }
+  .record-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .rec-btn{
+    flex:1;padding:10px 12px;border-radius:10px;border:none;font-size:16px;font-weight:900;
+    cursor:pointer;white-space:nowrap;text-align:center;
+  }
+  .rec-btn:active{transform:scale(0.96);}
+
+  /* 智慧導航選擇彈窗 (iOS 專用) */
+  #navPickerModal{
+    position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,0.8);
+    display:flex;align-items:flex-end;justify-content:center;
+    padding:0 12px calc(16px + env(safe-area-inset-bottom));
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  #navPickerModal.show{opacity:1;pointer-events:auto;}
+  .nav-picker-card{
+    background:#181818;border:2.5px solid #555;border-radius:20px;
+    width:100%;max-width:480px;padding:20px 16px;
+    display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,0.95);
+  }
+  .nav-option-btn{
+    width:100%;padding:16px;border-radius:14px;border:2px solid #555;
+    background:#222;color:#fff;font-size:19px;font-weight:900;
+    display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;
+  }
+  .nav-option-btn.apple{background:#002b11;border-color:#00e676;color:#00e676;}
+  .nav-option-btn.google{background:#112233;border-color:#2979ff;color:#448aff;}
+
+  /* 自訂確認與提示彈窗 */
+  #dialogModal{
+    position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,0.85);
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  }
+  .dialog-card{
+    background:#161616;border:3px solid #ffeb3b;border-radius:20px;
+    padding:24px 20px;max-width:420px;width:100%;text-align:center;
+    display:flex;flex-direction:column;gap:16px;box-shadow:0 12px 36px rgba(0,0,0,0.95);
+  }
+
+  /* 地圖自訂標記 */
+  .me-pin{
+    width:22px;height:22px;border-radius:50%;background:#00e676;
+    border:4px solid #fff;box-shadow:0 0 0 8px rgba(0,230,118,0.35), 0 4px 10px rgba(0,0,0,0.8);
+  }
+  .spot-pin{
+    font-size:34px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.85));
+    transform:translate(-50%,-100%);
+  }
+  .leaflet-tooltip.lineTip{
+    background:#000;color:#ffeb3b;border:2px solid #fff;font-size:15px;font-weight:900;
+    padding:6px 10px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.8);text-align:center;
+  }
+  .leaflet-tooltip.lineTip::before{display:none}
+
+  /* Toast 輕提示 */
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,20px);z-index:3400;
+    background:#ffeb3b;color:#000;padding:14px 20px;border-radius:12px;font-weight:900;
+    font-size:18px;opacity:0;transition:.25s;pointer-events:none;
+    border:3px solid #000;max-width:92vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.75);
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
+<body>
 
-    <div class="max-w-2xl mx-auto space-y-6">
-        <!-- 標題 (黃框單行顯示) -->
-        <header class="text-center bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 shadow-2xl">
-            <h1 class="text-xl sm:text-3xl font-black text-amber-300 whitespace-nowrap overflow-hidden text-ellipsis">
-                📍 旅遊專用足跡與打卡系統
-            </h1>
-        </header>
+<!-- 全螢幕地圖 -->
+<div id="map"></div>
 
-        <!-- GPS 定位區塊 (藍框) -->
-        <section class="bg-slate-900 border-4 border-blue-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <div>
-                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl sm:text-2xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
-                    📡 開啟 GPS 並取得目前位置
-                </button>
-                <div id="gpsStatus" class="mt-3 text-lg sm:text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
-                    ⚠️ 尚未取得 GPS 定位
-                </div>
-            </div>
-        </section>
+<!-- 頂部控制列：GPS狀態 + 距離 + [打卡駐點足跡選單 + 出發導航按鈕並排] -->
+<div id="topbar">
+  <div class="top-status-row">
+    <div class="chip" id="gpsChip" onclick="getGPSLocation(true)" style="cursor:pointer;" title="點擊重新取得 GPS">
+      <span id="gpsDot"></span>
+      <span id="gpsStatusText">正在取得 GPS...</span>
+    </div>
+    <div class="chip" id="distChip">
+      <span>距離目標</span>
+      <b id="targetDistance">--</b>
+    </div>
+  </div>
 
-        <!-- 選擇打卡駐點足跡下拉選單 -->
-        <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-xl border-4 border-slate-300">
-            <label for="locationSelect" class="block text-lg font-bold mb-2">
-                📍 選擇打卡駐點足跡：
-            </label>
-            <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-3 text-lg focus:outline-none">
-                <!-- 動態載入 -->
-            </select>
-        </div>
+  <!-- 打卡駐點足跡與出發導航按鈕放在一起 -->
+  <div class="spot-nav-bar">
+    <select id="locationSelect" onchange="onSelectLocationChange()" aria-label="選擇打卡駐點足跡"></select>
+    <button id="navGoBtn" onclick="navigateToSelected()">🚗 出發導航</button>
+  </div>
+</div>
 
-        <!-- 目標距離顯示 (置中對齊) -->
-        <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-xl border-4 border-emerald-500 space-y-1 text-center">
-            <div class="text-base sm:text-lg font-black text-emerald-900">
-                📍 您與目標位置距離：
-            </div>
-            <div id="targetDistance" class="text-2xl sm:text-3xl font-black text-emerald-800 tracking-wider">
-                -- 公里
-            </div>
-        </div>
+<!-- 右側圓形懸浮操作按鈕組 (比照揪團定位 App 單手操作配置) -->
+<div class="control-group">
+  <button id="checkinOpenBtn" class="ctrl-btn" onclick="openCheckinModal()" title="新增駐點打卡">✍️<span>打卡</span></button>
+  <button id="gpsTrackBtn" class="ctrl-btn" onclick="toggleFollowMe()" title="切換 GPS 跟隨">◎<span>定位</span></button>
+  <button id="lineReportBtn" class="ctrl-btn" onclick="copyLineReport()" title="複製近 2 天內 LINE 報平安">📋<span>報平安</span></button>
+  <button id="historyOpenBtn" class="ctrl-btn" onclick="openHistoryModal()" title="查看與管理打卡足跡">📦<span>足跡</span></button>
+  <button id="toolsOpenBtn" class="ctrl-btn" onclick="openToolsModal()" title="備份與還原資料">🛠️<span>備份</span></button>
+</div>
 
-        <!-- 巨大化地圖顯示區域 (完全拿掉外框，佔滿螢幕 70vh 以上) -->
-        <div class="w-full h-[72vh] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 z-0">
-            <div id="map" class="w-full h-full"></div>
-        </div>
+<!-- 底部目前選中駐點資訊膠囊 -->
+<div id="bottomSpotBanner">
+  <div class="banner-info">
+    <div class="banner-title" id="bannerSpotTitle">📍 尚未選擇打卡駐點</div>
+    <div class="banner-sub" id="bannerSpotSub">請點擊右側「✍️ 打卡」新增位置</div>
+  </div>
+  <button class="banner-focus-btn" onclick="focusSelectedSpot()">視野對焦</button>
+</div>
 
-        <!-- 出發導航綠色按鈕 (單行顯示) -->
-        <div>
-            <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-lg sm:text-2xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 text-center whitespace-nowrap transition-transform active:scale-95">
-                🚗 出發導航 (開啟 Google 地圖)
-            </a>
-        </div>
+<!-- 1. 新增駐點打卡滿版視窗 -->
+<div id="checkinModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>✍️ 新增旅遊駐點打卡</h2>
+    </div>
+    <div style="background:#181818;border:2px solid #444;border-radius:12px;padding:12px;font-size:16px;color:#ccc;">
+      目前 GPS 座標：<b id="modalCoordText" style="color:#00e676;">定位中...</b>
+    </div>
+    <label style="font-size:18px;font-weight:900;color:#ffeb3b;">請輸入景點名稱或備註說明：</label>
+    <input type="text" id="locDesc" class="input-large" placeholder="例如：美濃民俗村、停車場入口" maxlength="30" autocomplete="off">
+    
+    <button class="action-btn btn-green" onclick="saveCheckIn()">💾 儲存目前位置打卡</button>
+    <button class="action-btn btn-blue" onclick="getGPSLocation(true)">📡 重新刷新目前 GPS 位置</button>
+    <button class="close-modal-btn" onclick="closeAllModals()">取消並返回地圖</button>
+  </div>
+</div>
 
-        <!-- 新增打卡區塊 -->
-        <section class="bg-slate-900 border-4 border-cyan-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <h2 class="text-xl sm:text-2xl font-black text-cyan-300">
-                ✍️ 新增旅遊駐點打卡
-            </h2>
+<!-- 2. 所有打卡足跡紀錄管理滿版視窗 -->
+<div id="historyModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>📦 打卡足跡紀錄管理</h2>
+      <span id="recordCountBadge" style="background:#ffeb3b;color:#000;padding:4px 10px;border-radius:8px;font-weight:900;font-size:15px;">0 筆</span>
+    </div>
+    <div id="allRecordList" class="record-list"></div>
+    <button class="close-modal-btn" onclick="closeAllModals()">關閉足跡列表</button>
+  </div>
+</div>
 
-            <div class="space-y-2">
-                <input type="text" id="locDesc" placeholder="請輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-xl placeholder-slate-500 focus:outline-none">
-            </div>
-
-            <div>
-                <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
-                    💾 儲存目前位置打卡
-                </button>
-            </div>
-        </section>
-
-        <!-- 報平安與備份小工具區塊 -->
-        <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <h2 class="text-xl sm:text-2xl font-black text-amber-300">
-                🛠️ 旅遊便利小工具
-            </h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-amber-300 flex items-center justify-center gap-2 whitespace-nowrap">
-                    📋 複製 LINE 報平安
-                </button>
-                <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-indigo-300 flex items-center justify-center gap-2 whitespace-nowrap">
-                    📤 備份回憶資料
-                </button>
-                <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-violet-300 flex items-center justify-center gap-2 whitespace-nowrap sm:col-span-2">
-                    📥 還原備份資料
-                </button>
-                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
-            </div>
-        </section>
-
-        <!-- 所有打卡紀錄清單管理 -->
-        <section class="bg-slate-900 border-4 border-purple-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-purple-300 flex items-center justify-between whitespace-nowrap">
-                <span>📦 詳細打卡紀錄列表</span>
-                <span id="warehouseToggleText" class="text-amber-300 text-lg">[ 展開 🔽 ]</span>
-            </button>
-            
-            <div id="historyWarehouseContainer" class="hidden space-y-4 pt-4 border-t-2 border-purple-800">
-                <div id="allRecordList" class="space-y-4">
-                    <!-- 紀錄選單清單渲染區域 -->
-                </div>
-            </div>
-        </section>
-
-        <!-- 彈窗與二次確認 -->
-        <div id="msgModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl">
-                <p id="msgText" class="text-2xl font-bold text-amber-300 mb-6"></p>
-                <button onclick="closeModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-4 rounded-2xl shadow-lg border-2 border-emerald-400">
-                    確定知道了 👍
-                </button>
-            </div>
-        </div>
-
-        <div id="deleteModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-6">
-                <p class="text-2xl font-bold text-rose-300">⚠️ 請問確定要刪除這筆回憶紀錄嗎？</p>
-                <div class="flex gap-4">
-                    <button onclick="closeDeleteModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-slate-500">
-                        取消
-                    </button>
-                    <button id="confirmDeleteBtn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-rose-400">
-                        確定刪除 🗑️
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <footer class="text-center text-slate-400 text-base pb-8">
-            <p>❤️ 專為旅遊設計的安心足跡紀錄系統</p>
-        </footer>
+<!-- 3. 旅遊便利小工具滿版視窗 -->
+<div id="toolsModal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>🛠️ 旅遊便利小工具</h2>
+    </div>
+    <div style="background:#181818;border:2px solid #06c755;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:18px;font-weight:900;color:#00e676;">📋 LINE 報平安（自動過濾 2 天內紀錄）</div>
+      <div style="font-size:15px;color:#ccc;line-height:1.45;">僅會擷取「最近 2 天內（48 小時內）」的打卡駐點與導航連結，避免傳送到舊行程。</div>
+      <button class="action-btn btn-green" onclick="copyLineReport()">📋 一鍵複製 LINE 報平安</button>
     </div>
 
-    <script>
-        let currentLat = null;
-        let currentLng = null;
-        let allRecords = [];
-        let pendingDeleteIndex = null;
-        let map = null;
-        let mapMarker = null;
+    <div style="background:#181818;border:2px solid #7c4dff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:18px;font-weight:900;color:#b388ff;">💾 足跡資料備份與還原</div>
+      <button class="action-btn btn-amber" onclick="exportBackup()">📤 匯出備份檔案 (.json)</button>
+      <button class="action-btn btn-purple" onclick="triggerImport()">📥 匯入還原備份資料</button>
+      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
+    </div>
 
-        window.onload = function() {
-            initMap();
-            loadData();
-        };
+    <button class="close-modal-btn" onclick="closeAllModals()">關閉工具視窗</button>
+  </div>
+</div>
 
-        function initMap() {
-            map = L.map('map').setView([22.6273, 120.3014], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; Leaflet | &copy; OpenStreetMap'
-            }).addTo(map);
+<!-- 4. 智慧導航選擇彈窗 (iOS 專用) -->
+<div id="navPickerModal">
+  <div class="nav-picker-card">
+    <div style="color:#fff;font-size:20px;font-weight:900;text-align:center;">🧭 選擇導航地圖</div>
+    <div style="font-size:15px;color:#bbb;text-align:center;" id="navPickerSub">請選擇您要使用的地圖應用程式</div>
+    <button class="nav-option-btn apple" id="navAppleBtn">🍏 Apple 地圖 (建議 iPhone 使用)</button>
+    <button class="nav-option-btn google" id="navGoogleBtn">🗺️ Google 地圖 (建議 Android 使用)</button>
+    <button class="close-modal-btn" style="margin-top:4px;" onclick="closeNavPicker()">取消</button>
+  </div>
+</div>
+
+<!-- 5. 刪除二次確認視窗 -->
+<div id="dialogModal" class="hidden">
+  <div class="dialog-card">
+    <div style="font-size:40px;">⚠️</div>
+    <div id="dialogText" style="font-size:21px;font-weight:900;color:#ffeb3b;line-height:1.4;">確定要刪除這筆回憶紀錄嗎？</div>
+    <div style="display:flex;gap:10px;">
+      <button class="rec-btn" style="background:#333;color:#fff;border:1.5px solid #777;padding:14px;" onclick="closeDialogModal()">取消</button>
+      <button id="confirmDialogBtn" class="rec-btn" style="background:#ff1744;color:#fff;padding:14px;">確定刪除 🗑️</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'senior_travel_all_records';
+  const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 2 天 (48 小時) 毫秒數
+
+  let currentLat = null;
+  let currentLng = null;
+  let allRecords = [];
+  let pendingDeleteIndex = null;
+  let pendingNavDest = null;
+
+  let map = null;
+  let meMarker = null;
+  let spotMarker = null;
+  let guideLine = null;
+  let isFollowing = false;
+  let firstFix = false;
+  let watchId = null;
+
+  const $ = s => document.querySelector(s);
+
+  function toast(msg, ms) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), ms || 3200);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const rad = d => d * Math.PI / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLon = rad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  function fmtDistAndTime(m) {
+    if (m == null) return '等待 GPS 定位';
+    const distStr = m < 1000 ? `${Math.round(m)} 公尺` : `${(m / 1000).toFixed(2)} 公里`;
+    if (m > 2000) {
+      const mins = Math.max(1, Math.round(m / 500));
+      return `${distStr}（🚗 約 ${mins} 分鐘）`;
+    } else {
+      const mins = Math.max(1, Math.round(m / 75));
+      return `${distStr}（🚶 步行約 ${mins} 分鐘）`;
+    }
+  }
+
+  /* ================= 地圖初始化與定位 ================= */
+  function initMap() {
+    map = L.map('map', { zoomControl: false }).setView([22.6273, 120.3014], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    map.on('dragstart', () => {
+      if (isFollowing) setFollowMode(false);
+    });
+  }
+
+  function updateMeMarker() {
+    if (!map || currentLat == null || currentLng == null) return;
+    const ll = [currentLat, currentLng];
+    if (!meMarker) {
+      const meIcon = L.divIcon({
+        className: '',
+        html: '<div class="me-pin"></div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      meMarker = L.marker(ll, { icon: meIcon, zIndexOffset: 1000 }).addTo(map);
+    } else {
+      meMarker.setLatLng(ll);
+    }
+    $('#modalCoordText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+  }
+
+  function startWatchGPS() {
+    if (!navigator.geolocation) {
+      $('#gpsStatusText').textContent = '瀏覽器不支援 GPS';
+      return;
+    }
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        currentLat = pos.coords.latitude;
+        currentLng = pos.coords.longitude;
+        $('#gpsDot').classList.add('on');
+        $('#gpsStatusText').textContent = 'GPS 定位已連線';
+        updateMeMarker();
+
+        if (!firstFix) {
+          firstFix = true;
+          setFollowMode(true);
+        } else if (isFollowing) {
+          map.panTo([currentLat, currentLng]);
         }
+        refreshSelectedSpotVisuals(false);
+      },
+      (err) => {
+        $('#gpsDot').classList.remove('on');
+        $('#gpsStatusText').textContent = '尚未取得 GPS 訊號';
+      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
+  }
 
-        function showModal(text) {
-            document.getElementById('msgText').innerText = text;
-            document.getElementById('msgModal').classList.remove('hidden');
+  window.getGPSLocation = function(manualClick) {
+    if (!navigator.geolocation) return toast('❌ 您的瀏覽器不支援 GPS 定位');
+    if (manualClick) toast('📡 正在重新定位中...');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        currentLat = pos.coords.latitude;
+        currentLng = pos.coords.longitude;
+        $('#gpsDot').classList.add('on');
+        $('#gpsStatusText').textContent = 'GPS 定位已連線';
+        updateMeMarker();
+        setFollowMode(true);
+        refreshSelectedSpotVisuals(false);
+        if (manualClick) toast('✅ 已更新至最新 GPS 位置');
+      },
+      () => {
+        toast('❌ 無法取得 GPS 位置，請確認手機定位已開啟');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  function setFollowMode(enable) {
+    isFollowing = enable;
+    const btn = $('#gpsTrackBtn');
+    if (enable) {
+      btn.classList.add('following');
+      btn.innerHTML = '◎<span>跟隨中</span>';
+      if (currentLat != null && map) {
+        map.setView([currentLat, currentLng], 17);
+      }
+    } else {
+      btn.classList.remove('following');
+      btn.innerHTML = '◎<span>定位</span>';
+    }
+  }
+
+  window.toggleFollowMe = function() {
+    if (currentLat == null) {
+      getGPSLocation(true);
+      return;
+    }
+    setFollowMode(!isFollowing);
+    toast(isFollowing ? '🎯 已開啟 GPS 跟隨視角' : '已切換為自由瀏覽地圖');
+  };
+
+  /* ================= 資料存取與時間解析 ================= */
+  function parseRecordTimestamp(item) {
+    // 1. 優先使用紀錄儲存時的數字型 timestamp (id 或 createdAt)
+    if (typeof item.createdAt === 'number' && item.createdAt > 1000000000000) {
+      return item.createdAt;
+    }
+    if (typeof item.id === 'number' && item.id > 1000000000000) {
+      return item.id;
+    }
+    // 2. 若為舊資料僅有 "M/D HH:mm" 字串，嘗試推算當年或去年最近時間
+    if (typeof item.time === 'string') {
+      const m = item.time.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
+      if (m) {
+        const now = new Date();
+        let d = new Date(now.getFullYear(), parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[3], 10), parseInt(m[4], 10));
+        // 避免跨年時把去年12月誤判成今年未來時間
+        if (d.getTime() - now.getTime() > 24 * 60 * 60 * 1000) {
+          d.setFullYear(now.getFullYear() - 1);
         }
+        return d.getTime();
+      }
+    }
+    return null;
+  }
 
-        function closeModal() {
-            document.getElementById('msgModal').classList.add('hidden');
+  function loadData() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        allRecords = JSON.parse(saved);
+      } else {
+        const oldLatest = localStorage.getItem('senior_travel_latest');
+        const oldHistory = localStorage.getItem('senior_travel_history');
+        let temp = [];
+        if (oldLatest) temp = temp.concat(JSON.parse(oldLatest));
+        if (oldHistory) temp = temp.concat(JSON.parse(oldHistory));
+        if (temp.length > 0) allRecords = temp;
+      }
+    } catch (e) {
+      console.error('載入資料失敗', e);
+    }
+    updateDropdownAndMap();
+    renderRecordList();
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allRecords));
+    } catch (e) {
+      console.error('儲存資料失敗', e);
+    }
+  }
+
+  /* ================= 打卡駐點足跡選單與地圖引導線 ================= */
+  function updateDropdownAndMap() {
+    const selectEl = $('#locationSelect');
+    selectEl.innerHTML = '';
+
+    if (allRecords.length === 0) {
+      const option = document.createElement('option');
+      option.text = '⚠️ 尚未有打卡駐點紀錄';
+      option.value = '';
+      selectEl.add(option);
+
+      $('#targetDistance').textContent = '--';
+      $('#bannerSpotTitle').textContent = '📍 尚未選擇打卡駐點';
+      $('#bannerSpotSub').textContent = '請點擊右側「✍️ 打卡」新增位置';
+      if (spotMarker) { map.removeLayer(spotMarker); spotMarker = null; }
+      if (guideLine) { map.removeLayer(guideLine); guideLine = null; }
+      return;
+    }
+
+    allRecords.forEach((item, index) => {
+      const option = document.createElement('option');
+      const isLatest = (index === 0) ? '【最新】' : '';
+      option.text = `📍 ${isLatest}${item.desc} (${item.time})`;
+      option.value = index;
+      selectEl.add(option);
+    });
+
+    selectEl.selectedIndex = 0;
+    onSelectLocationChange();
+  }
+
+  window.onSelectLocationChange = function() {
+    refreshSelectedSpotVisuals(true);
+  };
+
+  function refreshSelectedSpotVisuals(shouldFitBounds) {
+    const idx = $('#locationSelect').value;
+    if (idx === '' || !allRecords[idx]) return;
+
+    const selected = allRecords[idx];
+    const lat = selected.lat;
+    const lng = selected.lng;
+
+    // 繪製駐點標記
+    const spotIcon = L.divIcon({
+      className: 'spot-pin',
+      html: '🚩',
+      iconSize: [34, 34],
+      iconAnchor: [17, 34]
+    });
+
+    if (!spotMarker) {
+      spotMarker = L.marker([lat, lng], { icon: spotIcon }).addTo(map);
+    } else {
+      spotMarker.setLatLng([lat, lng]);
+    }
+
+    // 計算距離與時間
+    let distMeters = null;
+    if (currentLat != null && currentLng != null) {
+      distMeters = haversineMeters(currentLat, currentLng, lat, lng);
+      $('#targetDistance').textContent = distMeters < 1000
+        ? `${Math.round(distMeters)} 公尺`
+        : `${(distMeters / 1000).toFixed(2)} 公里`;
+
+      // 繪製目前位置到駐點的虛線引導線
+      const pts = [[currentLat, currentLng], [lat, lng]];
+      if (!guideLine) {
+        guideLine = L.polyline(pts, {
+          color: '#ffeb3b', weight: 5, dashArray: '10 10', opacity: 0.9
+        }).addTo(map);
+      } else {
+        guideLine.setLatLngs(pts);
+      }
+    } else {
+      $('#targetDistance').textContent = '等待定位';
+    }
+
+    // 更新底部膠囊資訊
+    $('#bannerSpotTitle').textContent = `🚩 ${selected.desc} (${selected.time})`;
+    $('#bannerSpotSub').textContent = `距離：${fmtDistAndTime(distMeters)}`;
+
+    if (shouldFitBounds) {
+      setFollowMode(false);
+      if (currentLat != null && currentLng != null) {
+        map.fitBounds(L.latLngBounds([[currentLat, currentLng], [lat, lng]]).pad(0.32));
+      } else {
+        map.setView([lat, lng], 16);
+      }
+    }
+  }
+
+  window.focusSelectedSpot = function() {
+    const idx = $('#locationSelect').value;
+    if (idx === '' || !allRecords[idx]) return toast('目前尚無可對焦的打卡駐點');
+    refreshSelectedSpotVisuals(true);
+    toast('🎯 已對焦至選取的駐點足跡');
+  };
+
+  /* ================= 智慧導航 (與揪團定位 App 相同體驗) ================= */
+  function checkIsIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  window.navigateToSelected = function() {
+    const idx = $('#locationSelect').value;
+    if (idx === '' || !allRecords[idx]) {
+      return toast('⚠️ 請先選擇或新增一個打卡駐點！');
+    }
+    const target = allRecords[idx];
+    openSmartNavigation(target.lat, target.lng, target.desc);
+  };
+
+  window.openSmartNavigation = function(lat, lng, destName) {
+    pendingNavDest = { lat, lng, destName: destName || '目的地' };
+    if (!checkIsIOS()) {
+      launchGoogleNav(lat, lng);
+      return;
+    }
+    $('#navPickerSub').textContent = `導航目的地：${destName || '所選駐點'}`;
+    $('#navPickerModal').classList.add('show');
+  };
+
+  function launchGoogleNav(lat, lng) {
+    const q = new URLSearchParams({
+      api: '1', destination: `${lat},${lng}`, travelmode: 'driving'
+    });
+    if (currentLat != null && currentLng != null) {
+      q.set('origin', `${currentLat},${currentLng}`);
+    }
+    window.open('https://www.google.com/maps/dir/?' + q.toString(), '_blank', 'noopener');
+  }
+
+  function launchAppleNav(lat, lng, destName) {
+    let url = `https://maps.apple.com/?daddr=${lat},${lng}`;
+    if (destName) url += `&q=${encodeURIComponent(destName)}`;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  window.closeNavPicker = function() {
+    $('#navPickerModal').classList.remove('show');
+  };
+
+  $('#navGoogleBtn').addEventListener('click', () => {
+    closeNavPicker();
+    if (pendingNavDest) launchGoogleNav(pendingNavDest.lat, pendingNavDest.lng);
+  });
+  $('#navAppleBtn').addEventListener('click', () => {
+    closeNavPicker();
+    if (pendingNavDest) launchAppleNav(pendingNavDest.lat, pendingNavDest.lng, pendingNavDest.destName);
+  });
+
+  /* ================= 新增打卡 ================= */
+  window.openCheckinModal = function() {
+    if (currentLat == null || currentLng == null) {
+      getGPSLocation(false);
+    }
+    $('#checkinModal').classList.remove('hidden');
+    setTimeout(() => $('#locDesc').focus(), 100);
+  };
+
+  window.saveCheckIn = function() {
+    const descInput = $('#locDesc');
+    const desc = descInput.value.trim();
+
+    if (currentLat == null || currentLng == null) {
+      return toast('⚠️ 尚未取得 GPS 定位，請稍候或按重新刷新！');
+    }
+    if (!desc) {
+      toast('請輸入景點名稱或說明！');
+      descInput.focus();
+      return;
+    }
+
+    const now = new Date();
+    const nowTs = now.getTime();
+    const timeString = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newRecord = {
+      id: nowTs,
+      createdAt: nowTs,
+      desc: desc,
+      lat: currentLat,
+      lng: currentLng,
+      time: timeString
+    };
+
+    allRecords.unshift(newRecord);
+    saveData();
+    updateDropdownAndMap();
+    renderRecordList();
+    descInput.value = '';
+    closeAllModals();
+    toast(`🎉 打卡成功：${desc}`);
+  };
+
+  /* ================= 複製 LINE 報平安（嚴格限制不超過 2 天前資料） ================= */
+  window.copyLineReport = function() {
+    if (allRecords.length === 0) {
+      return toast('⚠️ 目前沒有任何打卡紀錄可以複製！');
+    }
+
+    const nowTs = Date.now();
+    const cutoffTs = nowTs - TWO_DAYS_MS; // 48 小時前門檻
+
+    // 過濾出「2 天內（不超過 2 天前）」的打卡紀錄
+    const recentRecords = allRecords.filter(item => {
+      const ts = parseRecordTimestamp(item);
+      if (ts === null) return false;
+      return ts >= cutoffTs;
+    });
+
+    if (recentRecords.length === 0) {
+      return toast('⚠️ 近 2 天內沒有新的打卡紀錄（已自動過濾超過 2 天前的舊資料）！', 4500);
+    }
+
+    let reportText = '📍【旅遊平安回報與足跡】
+';
+    const items = recentRecords.slice(0, 8);
+    items.forEach((item, idx) => {
+      reportText += `${idx + 1}. ${item.desc} (${item.time})
+`;
+      reportText += `   導航：https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}
+`;
+    });
+    reportText += '家人們不用擔心，我目前平安順利！❤️';
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(reportText).then(() => {
+        toast(`📋 已複製近 2 天內共 ${items.length} 筆報平安足跡，可直接貼到 LINE！`, 4000);
+      }).catch(() => fallbackCopyText(reportText, items.length));
+    } else {
+      fallbackCopyText(reportText, items.length);
+    }
+  };
+
+  function fallbackCopyText(text, count) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast(`📋 已複製近 2 天內共 ${count} 筆報平安足跡！`, 4000);
+    } catch (e) {
+      toast('❌ 複製失敗，請手動授權剪貼簿權限');
+    }
+    ta.remove();
+  }
+
+  /* ================= 歷史足跡清單與刪除 ================= */
+  window.openHistoryModal = function() {
+    renderRecordList();
+    $('#historyModal').classList.remove('hidden');
+  };
+
+  function renderRecordList() {
+    $('#recordCountBadge').textContent = `${allRecords.length} 筆`;
+    const container = $('#allRecordList');
+
+    if (allRecords.length === 0) {
+      container.innerHTML = '<div style="color:#aaa;font-size:18px;text-align:center;padding:30px 10px;">目前尚無打卡足跡紀錄。</div>';
+      return;
+    }
+
+    const cutoffTs = Date.now() - TWO_DAYS_MS;
+
+    container.innerHTML = allRecords.map((item, index) => {
+      const ts = parseRecordTimestamp(item);
+      const isRecent = ts !== null && ts >= cutoffTs;
+      const badgeHtml = isRecent
+        ? `<span style="background:#003314;color:#00e676;border:1px solid #00e676;font-size:12px;padding:2px 7px;border-radius:6px;font-weight:900;">2天內</span>`
+        : `<span style="background:#2a2a2a;color:#999;border:1px solid #555;font-size:12px;padding:2px 7px;border-radius:6px;font-weight:bold;">超過2天</span>`;
+
+      return `
+        <div class="record-card" style="border-left-color:${index === 0 ? '#00e676' : '#ffeb3b'};">
+          <div class="record-top">
+            <div class="record-title">📌 ${escapeHtml(item.desc)} ${badgeHtml}</div>
+            <span class="record-time">${escapeHtml(item.time)}</span>
+          </div>
+          <div class="record-actions">
+            <button class="rec-btn" style="background:#2979ff;color:#fff;" onclick="selectAndFocusMap(${index})">🗺️ 地圖查看</button>
+            <button class="rec-btn" style="background:#00e676;color:#000;" onclick="openSmartNavigation(${item.lat}, ${item.lng}, '${escapeHtml(item.desc)}')">🚗 導航</button>
+            <button class="rec-btn" style="background:#3a1212;color:#ff8a80;border:1.5px solid #ff5252;flex:0 0 auto;" onclick="confirmDeleteRecord(${index})">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.selectAndFocusMap = function(index) {
+    $('#locationSelect').value = index;
+    closeAllModals();
+    refreshSelectedSpotVisuals(true);
+  };
+
+  window.confirmDeleteRecord = function(index) {
+    pendingDeleteIndex = index;
+    const target = allRecords[index];
+    $('#dialogText').textContent = `⚠️ 確定要刪除「${target ? target.desc : '這筆紀錄'}」嗎？`;
+    $('#dialogModal').classList.remove('hidden');
+  };
+
+  window.closeDialogModal = function() {
+    $('#dialogModal').classList.add('hidden');
+    pendingDeleteIndex = null;
+  };
+
+  $('#confirmDialogBtn').addEventListener('click', () => {
+    if (pendingDeleteIndex !== null) {
+      allRecords.splice(pendingDeleteIndex, 1);
+      saveData();
+      updateDropdownAndMap();
+      renderRecordList();
+      toast('🗑️ 該筆紀錄已刪除');
+    }
+    closeDialogModal();
+  });
+
+  /* ================= 備份與還原 ================= */
+  window.openToolsModal = function() {
+    $('#toolsModal').classList.remove('hidden');
+  };
+
+  window.exportBackup = function() {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(allRecords));
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', dataStr);
+    anchor.setAttribute('download', `travel_footprint_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    toast('📤 備份檔案已下載');
+  };
+
+  window.triggerImport = function() {
+    $('#importFile').click();
+  };
+
+  window.importBackup = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (Array.isArray(parsed)) {
+          allRecords = parsed;
+        } else if (parsed.latestRecords) {
+          allRecords = [...parsed.latestRecords, ...parsed.historyRecords];
         }
+        saveData();
+        updateDropdownAndMap();
+        renderRecordList();
+        closeAllModals();
+        toast('📥 備份資料還原成功！');
+      } catch (err) {
+        toast('❌ 解析備份檔案失敗！');
+      }
+    };
+    reader.readAsText(file);
+  };
 
-        function loadData() {
-            try {
-                const saved = localStorage.getItem('senior_travel_all_records');
-                if (saved) {
-                    allRecords = JSON.parse(saved);
-                } else {
-                    const oldLatest = localStorage.getItem('senior_travel_latest');
-                    const oldHistory = localStorage.getItem('senior_travel_history');
-                    let temp = [];
-                    if (oldLatest) temp = temp.concat(JSON.parse(oldLatest));
-                    if (oldHistory) temp = temp.concat(JSON.parse(oldHistory));
-                    if (temp.length > 0) allRecords = temp;
-                }
-            } catch (e) {
-                console.error("載入資料失敗", e);
-            }
-            updateDropdownAndMap();
-            renderRecordList();
-        }
+  window.closeAllModals = function() {
+    $('#checkinModal').classList.add('hidden');
+    $('#historyModal').classList.add('hidden');
+    $('#toolsModal').classList.add('hidden');
+  };
 
-        function saveData() {
-            try {
-                localStorage.setItem('senior_travel_all_records', JSON.stringify(allRecords));
-            } catch (e) {
-                console.error("儲存資料失敗", e);
-            }
-        }
+  $('#locDesc').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveCheckIn();
+  });
 
-        function updateDropdownAndMap() {
-            const selectEl = document.getElementById('locationSelect');
-            selectEl.innerHTML = '';
-
-            if (allRecords.length === 0) {
-                const option = document.createElement('option');
-                option.text = "⚠️ 尚未有打卡駐點紀錄";
-                option.value = "";
-                selectEl.add(option);
-                document.getElementById('targetDistance').innerText = "-- 公里";
-                document.getElementById('navGoBtn').href = "#";
-                return;
-            }
-
-            allRecords.forEach((item, index) => {
-                const option = document.createElement('option');
-                const isLatest = (index === 0) ? "【最新】" : "";
-                option.text = `📍 ${isLatest} ${item.desc} (${item.time})`;
-                option.value = index;
-                selectEl.add(option);
-            });
-
-            selectEl.selectedIndex = 0;
-            onSelectLocationChange();
-        }
-
-        function onSelectLocationChange() {
-            const selectEl = document.getElementById('locationSelect');
-            const idx = selectEl.value;
-
-            if (idx === "" || !allRecords[idx]) return;
-
-            const selected = allRecords[idx];
-            const lat = selected.lat;
-            const lng = selected.lng;
-            map.setView([lat, lng], 16);
-
-            if (mapMarker) {
-                map.removeLayer(mapMarker);
-            }
-            mapMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`📍 駐點位置：${selected.desc}`)
-                .openPopup();
-
-            document.getElementById('navGoBtn').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-            updateDistanceDisplay(lat, lng);
-            setTimeout(() => { map.invalidateSize(); }, 150);
-        }
-
-        function updateDistanceDisplay(targetLat, targetLng) {
-            const distSpan = document.getElementById('targetDistance');
-            if (currentLat !== null && currentLng !== null) {
-                const dist = calculateDistance(currentLat, currentLng, targetLat, targetLng);
-                if (dist !== null) {
-                    if (dist < 1) {
-                        distSpan.innerText = `${(dist * 1000).toFixed(0)} 公尺`;
-                    } else {
-                        distSpan.innerText = `${dist.toFixed(2)} 公里`;
-                    }
-                }
-            } else {
-                distSpan.innerText = "尚未取得 GPS 定位";
-            }
-        }
-
-        function getGPSLocation() {
-            const statusDiv = document.getElementById('gpsStatus');
-            if (!navigator.geolocation) {
-                statusDiv.innerHTML = "❌ 您的瀏覽器不支援 GPS 定位";
-                showModal("您的瀏覽器不支援 GPS 定位功能！");
-                return;
-            }
-
-            statusDiv.innerHTML = `<span class="animate-spin-custom">📡</span> 正在搜尋衛星定位中，請稍候...`;
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    currentLat = position.coords.latitude;
-                    currentLng = position.coords.longitude;
-                    statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-base text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
-                    onSelectLocationChange();
-                },
-                (error) => {
-                    console.error(error);
-                    statusDiv.innerHTML = "❌ 無法取得 GPS 位置，請確認手機定位已開啟";
-                    showModal("無法取得 GPS 位置！請檢查手機是否已授權瀏覽器存取定位。");
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
-        function saveCheckIn() {
-            const descInput = document.getElementById('locDesc');
-            const desc = descInput.value.trim();
-
-            if (currentLat === null || currentLng === null) {
-                showModal("請先點擊上方的「開啟 GPS 並取得目前位置」！");
-                return;
-            }
-
-            if (!desc) {
-                showModal("請輸入位置說明（例如：杉林衛生所）！");
-                descInput.focus();
-                return;
-            }
-
-            const now = new Date();
-            const timeString = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-            const newRecord = {
-                id: Date.now(),
-                desc: desc,
-                lat: currentLat,
-                lng: currentLng,
-                time: timeString
-            };
-
-            allRecords.unshift(newRecord);
-            saveData();
-            updateDropdownAndMap();
-            renderRecordList();
-            descInput.value = '';
-            showModal("🎉 打卡成功！最新駐點已更新！");
-        }
-
-        function renderRecordList() {
-            const container = document.getElementById('allRecordList');
-            if (allRecords.length === 0) {
-                container.innerHTML = `<div class="p-6 bg-slate-950 rounded-2xl text-center text-slate-400 text-xl">目前尚無歷史紀錄。</div>`;
-                return;
-            }
-
-            container.innerHTML = allRecords.map((item, index) => {
-                return `
-                    <div class="bg-slate-950 border-4 border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-xl font-black text-amber-300">📌 ${escapeHtml(item.desc)}</h3>
-                            <span class="text-sm bg-slate-900 text-cyan-300 px-3 py-1 rounded-xl border border-cyan-700">${item.time}</span>
-                        </div>
-                        <div class="flex gap-2 pt-2">
-                            <button onclick="selectAndFocusMap(${index})" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-lg font-bold py-3 px-3 rounded-xl text-center border-2 border-cyan-300 shadow whitespace-nowrap">
-                                🗺️ 地圖定位
-                            </button>
-                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-lg font-bold py-3 px-4 rounded-xl border-2 border-rose-400 shadow whitespace-nowrap">
-                                🗑️ 刪除
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function selectAndFocusMap(index) {
-            document.getElementById('locationSelect').value = index;
-            onSelectLocationChange();
-            window.scrollTo({ top: 150, behavior: 'smooth' });
-        }
-
-        function confirmDeleteRecord(index) {
-            pendingDeleteIndex = index;
-            document.getElementById('deleteModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-            pendingDeleteIndex = null;
-        }
-
-        document.getElementById('confirmDeleteBtn').onclick = function() {
-            if (pendingDeleteIndex !== null) {
-                allRecords.splice(pendingDeleteIndex, 1);
-                saveData();
-                updateDropdownAndMap();
-                renderRecordList();
-                showModal("🗑️ 該筆紀錄已刪除！");
-            }
-            closeDeleteModal();
-        };
-
-        function copyLineReport() {
-            if (allRecords.length === 0) {
-                showModal("目前沒有任何打卡紀錄可以複製！");
-                return;
-            }
-
-            let reportText = "📍【旅遊平安回報與足跡】\n";
-            const items = allRecords.slice(0, 5);
-            items.forEach((item, idx) => {
-                reportText += `${idx + 1}. ${item.desc} (${item.time})\n`;
-                reportText += `   導航：https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}\n`;
-            });
-            reportText += "家人們不用擔心，我目前平安順利！❤️";
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(reportText).then(() => {
-                    showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人！");
-                });
-            }
-        }
-
-        function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allRecords));
-            const anchor = document.createElement('a');
-            anchor.setAttribute("href", dataStr);
-            anchor.setAttribute("download", `travel_footprint_backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-            showModal("📤 備份檔案已成功下載！");
-        }
-
-        function triggerImport() {
-            document.getElementById('importFile').click();
-        }
-
-        function importBackup(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (Array.isArray(parsed)) {
-                        allRecords = parsed;
-                    } else if (parsed.latestRecords) {
-                        allRecords = [...parsed.latestRecords, ...parsed.historyRecords];
-                    }
-                    saveData();
-                    updateDropdownAndMap();
-                    renderRecordList();
-                    showModal("📥 備份資料還原成功！");
-                } catch (err) {
-                    showModal("❌ 解析備份檔案失敗！");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        function deg2rad(deg) { return deg * (Math.PI/180); }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        function toggleHistoryWarehouse() {
-            const container = document.getElementById('historyWarehouseContainer');
-            const toggleText = document.getElementById('warehouseToggleText');
-            if (container.classList.contains('hidden')) {
-                container.classList.remove('hidden');
-                toggleText.innerText = '[ 收合 🔼 ]';
-            } else {
-                container.classList.add('hidden');
-                toggleText.innerText = '[ 展開 🔽 ]';
-            }
-        }
-    </script>
+  /* ================= 啟動 ================= */
+  initMap();
+  loadData();
+  startWatchGPS();
+})();
+</script>
 </body>
 </html>
