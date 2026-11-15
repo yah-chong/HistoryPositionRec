@@ -57,14 +57,24 @@
             </div>
         </section>
 
-        <!-- 選擇打卡駐點足跡下拉選單 -->
-        <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-xl border-4 border-slate-300">
-            <label for="locationSelect" class="block text-lg font-bold mb-2">
-                📍 選擇打卡駐點足跡：
-            </label>
-            <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-3 text-lg focus:outline-none">
-                <!-- 動態載入 -->
-            </select>
+        <!-- 選擇打卡駐點足跡與出發導航按鈕並排 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <!-- 選擇打卡駐點足跡下拉選單 -->
+            <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-xl border-4 border-slate-300 h-full flex flex-col justify-between">
+                <label for="locationSelect" class="block text-lg font-bold mb-2">
+                    📍 選擇打卡駐點足跡：
+                </label>
+                <select id="locationSelect" onchange="onSelectLocationChange()" class="w-full bg-slate-50 text-blue-700 font-bold border-2 border-blue-400 rounded-xl p-3 text-lg focus:outline-none">
+                    <!-- 動態載入 -->
+                </select>
+            </div>
+
+            <!-- 出發導航綠色按鈕 -->
+            <div class="h-full flex items-end">
+                <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-base sm:text-lg font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 text-center whitespace-nowrap transition-transform active:scale-95 h-full">
+                    🚗 出發導航 (開啟 Google 地圖)
+                </a>
+            </div>
         </div>
 
         <!-- 目標距離顯示 (置中對齊) -->
@@ -80,13 +90,6 @@
         <!-- 巨大化地圖顯示區域 (完全拿掉外框，佔滿螢幕 70vh 以上) -->
         <div class="w-full h-[72vh] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 z-0">
             <div id="map" class="w-full h-full"></div>
-        </div>
-
-        <!-- 出發導航綠色按鈕 (單行顯示) -->
-        <div>
-            <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-lg sm:text-2xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 text-center whitespace-nowrap transition-transform active:scale-95">
-                🚗 出發導航 (開啟 Google 地圖)
-            </a>
         </div>
 
         <!-- 新增打卡區塊 -->
@@ -111,6 +114,20 @@
             <h2 class="text-xl sm:text-2xl font-black text-amber-300">
                 🛠️ 旅遊便利小工具
             </h2>
+            
+            <!-- 報平安天數選擇 -->
+            <div class="bg-slate-950 p-4 rounded-2xl border-2 border-amber-500/50 space-y-2">
+                <label for="reportDaysSelect" class="block text-base sm:text-lg font-bold text-amber-200">
+                    📋 選擇 LINE 報平安包含的天數範圍：
+                </label>
+                <select id="reportDaysSelect" class="w-full bg-slate-900 text-amber-300 font-bold border-2 border-amber-400 rounded-xl p-3 text-lg focus:outline-none">
+                    <option value="2" selected>最近 2 天內的打卡行程 (預設)</option>
+                    <option value="1">最近 1 天 (僅今天)</option>
+                    <option value="3">最近 3 天內的打卡行程</option>
+                    <option value="all">所有歷史打卡紀錄</option>
+                </select>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-amber-300 flex items-center justify-center gap-2 whitespace-nowrap">
                     📋 複製 LINE 報平安
@@ -338,7 +355,8 @@
                 desc: desc,
                 lat: currentLat,
                 lng: currentLng,
-                time: timeString
+                time: timeString,
+                timestamp: now.getTime() // 記錄真實毫秒數以便過濾天數
             };
 
             allRecords.unshift(newRecord);
@@ -409,9 +427,28 @@
                 return;
             }
 
-            let reportText = "📍【旅遊平安回報與足跡】\n";
-            const items = allRecords.slice(0, 5);
-            items.forEach((item, idx) => {
+            const daysVal = document.getElementById('reportDaysSelect').value;
+            let filteredItems = allRecords;
+
+            if (daysVal !== 'all') {
+                const daysLimit = parseInt(daysVal, 10);
+                const nowTime = new Date().getTime();
+                const limitMillis = daysLimit * 24 * 60 * 60 * 1000;
+
+                filteredItems = allRecords.filter(item => {
+                    // 若舊資料沒有 timestamp，則退回用陣列順序或當成符合處理，新資料有 timestamp 則精確過濾
+                    if (!item.timestamp) return true; 
+                    return (nowTime - item.timestamp) <= limitMillis;
+                });
+            }
+
+            if (filteredItems.length === 0) {
+                showModal(`所選的時間範圍（最近 ${daysVal} 天內）沒有任何打卡紀錄！`);
+                return;
+            }
+
+            let reportText = `📍【旅遊平安回報與足跡】(最近 ${daysVal === 'all' ? '所有' : daysVal + '天'} )\n`;
+            filteredItems.forEach((item, idx) => {
                 reportText += `${idx + 1}. ${item.desc} (${item.time})\n`;
                 reportText += `   導航：https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}\n`;
             });
@@ -419,7 +456,7 @@
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(reportText).then(() => {
-                    showModal("📋 已成功複製報平安足跡文字！可以直接貼到 LINE 傳給家人！");
+                    showModal(`📋 已成功複製報平安足跡文字（共 ${filteredItems.length } 筆）！可以直接貼到 LINE 傳給家人！`);
                 });
             }
         }
