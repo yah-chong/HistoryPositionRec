@@ -131,12 +131,12 @@
                     📋 複製 LINE 報平安
                 </button>
                 <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-indigo-300 flex items-center justify-center gap-2 whitespace-nowrap">
-                    📤 備份回憶資料
+                    📤 備份回憶 (存雲端/iCloud)
                 </button>
                 <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-violet-300 flex items-center justify-center gap-2 whitespace-nowrap sm:col-span-2">
                     📥 還原備份資料
                 </button>
-                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)">
+                <input type="file" id="importFile" accept=".json,application/json,text/plain" class="hidden" onchange="importBackup(event)">
             </div>
         </section>
 
@@ -458,15 +458,45 @@
             }
         }
 
-        function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allRecords));
+        async function exportBackup() {
+            if (allRecords.length === 0) {
+                showModal("目前沒有任何紀錄可以備份喔！");
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+            const fileName = `travel_footprint_backup_${dateStr}.json`;
+            const jsonString = JSON.stringify(allRecords, null, 2);
+
+            // 1. 優先嘗試手機原生「分享選單」(可直接存到 iPhone iCloud「儲存到檔案」或 Android Google 雲端硬碟 / LINE Keep)
+            try {
+                const file = new File([jsonString], fileName, { type: "application/json" });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: '旅遊足跡備份資料',
+                        text: '請選擇「儲存到檔案 (iCloud)」或傳送到雲端保存'
+                    });
+                    return; // 分享成功即結束
+                }
+            } catch (err) {
+                // 若使用者主動取消分享視窗則不報錯，其餘錯誤退回一般下載
+                if (err.name === 'AbortError') return;
+                console.log("改用一般下載模式", err);
+            }
+
+            // 2. 電腦版或不支援檔案分享的瀏覽器：退回傳統下載模式
+            const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
-            anchor.setAttribute("href", dataStr);
-            anchor.setAttribute("download", `travel_footprint_backup_${new Date().toISOString().slice(0,10)}.json`);
+            anchor.href = url;
+            anchor.download = fileName;
             document.body.appendChild(anchor);
             anchor.click();
             anchor.remove();
-            showModal("📤 備份檔案已成功下載！");
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showModal(`📤 備份檔案（${fileName}）已下載到手機的「下載」資料夾！`);
         }
 
         function triggerImport() {
@@ -495,6 +525,8 @@
                 }
             };
             reader.readAsText(file);
+            // 清空 input 值，確保下次選同一個檔案也能觸發 onchange
+            event.target.value = '';
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
