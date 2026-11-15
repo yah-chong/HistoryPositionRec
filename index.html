@@ -37,35 +37,35 @@
 </head>
 <body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
 
-    <div class="max-w-2xl mx-auto space-y-6">
-        <!-- 標題 (黃框單行顯示) -->
-        <header class="text-center bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 shadow-2xl">
-            <h1 class="text-xl sm:text-3xl font-black text-amber-300 whitespace-nowrap overflow-hidden text-ellipsis">
-                📍 旅遊專用足跡與打卡系統
+    <div class="max-w-2xl mx-auto space-y-5">
+        <!-- 簡潔頂部標題 -->
+        <header class="text-center bg-slate-900 border-2 border-amber-400/80 rounded-2xl p-4 shadow-lg">
+            <h1 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide">
+                📍 旅遊足跡與打卡系統
             </h1>
         </header>
 
-        <!-- GPS 定位與新增打卡區塊 (藍框) -->
-        <section class="bg-slate-900 border-4 border-blue-400 rounded-3xl p-5 shadow-2xl space-y-5">
+        <!-- GPS 定位與打卡核心區塊 (簡化外框，保持清爽) -->
+        <section class="bg-slate-900 border-2 border-blue-400/60 rounded-2xl p-4 shadow-xl space-y-4">
             <div>
-                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl sm:text-2xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-blue-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
+                <button onclick="getGPSLocation()" id="gpsBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl sm:text-2xl font-black py-4 px-4 rounded-xl shadow-md border-2 border-blue-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
                     📡 開啟 GPS 並取得目前位置
                 </button>
-                <div id="gpsStatus" class="mt-3 text-lg sm:text-xl text-amber-300 font-bold bg-slate-950 p-4 rounded-xl border-2 border-slate-800 text-center">
+                <div id="gpsStatus" class="mt-3 text-lg sm:text-xl text-amber-300 font-bold bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     ⚠️ 尚未取得 GPS 定位
                 </div>
             </div>
 
-            <!-- 新增旅遊駐點打卡 (緊接在 GPS 定位按鈕後方) -->
-            <div class="pt-4 border-t-2 border-slate-700 space-y-3">
-                <h2 class="text-xl sm:text-2xl font-black text-cyan-300">
+            <!-- 新增打卡欄位 -->
+            <div class="pt-3 border-t border-slate-800 space-y-3">
+                <h2 class="text-lg sm:text-xl font-bold text-cyan-300">
                     ✍️ 新增旅遊駐點打卡
                 </h2>
                 <div>
-                    <input type="text" id="locDesc" placeholder="請輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-4 border-amber-400 rounded-2xl p-4 text-xl placeholder-slate-500 focus:outline-none">
+                    <input type="text" id="locDesc" placeholder="請輸入景點名稱或說明..." class="w-full bg-slate-950 text-white border-2 border-amber-400/80 rounded-xl p-3 text-xl placeholder-slate-500 focus:outline-none">
                 </div>
                 <div>
-                    <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
+                    <button onclick="saveCheckIn()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-4 px-4 rounded-xl shadow-md border-2 border-emerald-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
                         💾 儲存目前位置打卡
                     </button>
                 </div>
@@ -75,7 +75,7 @@
         <!-- 選擇打卡駐點足跡與出發導航按鈕並排 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <!-- 選擇打卡駐點足跡下拉選單 -->
-            <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-xl border-4 border-slate-300 h-full flex flex-col justify-between">
+            <div class="bg-white text-gray-900 rounded-2xl p-4 shadow-xl border-2 border-slate-300 h-full flex flex-col justify-between">
                 <label for="locationSelect" class="block text-lg font-bold mb-2">
                     📍 選擇打卡駐點足跡：
                 </label>
@@ -86,36 +86,36 @@
 
             <!-- 出發導航綠色按鈕 -->
             <div class="h-full flex items-end">
-                <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-base sm:text-lg font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-emerald-300 flex items-center justify-center gap-2 text-center whitespace-nowrap transition-transform active:scale-95 h-full">
+                <a id="navGoBtn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-base sm:text-lg font-black py-4 px-4 rounded-2xl shadow-xl border-2 border-emerald-300 flex items-center justify-center gap-2 text-center whitespace-nowrap transition-transform active:scale-95 h-full">
                     🚗 出發導航 (開啟 Google 地圖)
                 </a>
             </div>
         </div>
 
-        <!-- 目標距離顯示 (置中對齊) -->
-        <div class="bg-emerald-100 text-emerald-950 rounded-2xl p-4 shadow-xl border-4 border-emerald-500 space-y-1 text-center">
-            <div class="text-base sm:text-lg font-black text-emerald-900">
+        <!-- 目標距離顯示 -->
+        <div class="bg-emerald-950/80 text-emerald-200 rounded-2xl p-3 shadow-md border-2 border-emerald-500/60 space-y-1 text-center">
+            <div class="text-base font-bold text-emerald-300">
                 📍 您與目標位置距離：
             </div>
-            <div id="targetDistance" class="text-2xl sm:text-3xl font-black text-emerald-800 tracking-wider">
+            <div id="targetDistance" class="text-2xl sm:text-3xl font-black text-emerald-400 tracking-wider">
                 -- 公里
             </div>
         </div>
 
-        <!-- 巨大化地圖顯示區域 (完全拿掉外框，佔滿螢幕 70vh 以上) -->
-        <div class="w-full h-[72vh] rounded-3xl overflow-hidden shadow-2xl border-4 border-slate-700 z-0">
+        <!-- 地圖顯示區域 -->
+        <div class="w-full h-[65vh] rounded-2xl overflow-hidden shadow-xl border-2 border-slate-700 z-0">
             <div id="map" class="w-full h-full"></div>
         </div>
 
         <!-- 報平安與備份小工具區塊 -->
-        <section class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <h2 class="text-xl sm:text-2xl font-black text-amber-300">
+        <section class="bg-slate-900 border-2 border-amber-400/60 rounded-2xl p-4 shadow-xl space-y-4">
+            <h2 class="text-lg sm:text-xl font-bold text-amber-300">
                 🛠️ 旅遊便利小工具
             </h2>
             
             <!-- 報平安天數選擇 -->
-            <div class="bg-slate-950 p-4 rounded-2xl border-2 border-amber-500/50 space-y-2">
-                <label for="reportDaysSelect" class="block text-base sm:text-lg font-bold text-amber-200">
+            <div class="bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
+                <label for="reportDaysSelect" class="block text-base font-bold text-amber-200">
                     📋 選擇 LINE 報平安包含的天數範圍：
                 </label>
                 <select id="reportDaysSelect" class="w-full bg-slate-900 text-amber-300 font-bold border-2 border-amber-400 rounded-xl p-3 text-lg focus:outline-none">
@@ -127,13 +127,13 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-amber-300 flex items-center justify-center gap-2 whitespace-nowrap">
+                <button onclick="copyLineReport()" class="bg-amber-600 hover:bg-amber-500 text-white text-lg font-bold py-3 px-3 rounded-xl shadow border border-amber-300 flex items-center justify-center gap-2 whitespace-nowrap">
                     📋 複製 LINE 報平安
                 </button>
-                <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-indigo-300 flex items-center justify-center gap-2 whitespace-nowrap">
+                <button onclick="exportBackup()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-lg font-bold py-3 px-3 rounded-xl shadow border border-indigo-300 flex items-center justify-center gap-2 whitespace-nowrap">
                     📤 備份回憶 (存雲端/iCloud)
                 </button>
-                <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-lg font-bold py-3 px-3 rounded-2xl shadow border-2 border-violet-300 flex items-center justify-center gap-2 whitespace-nowrap sm:col-span-2">
+                <button onclick="triggerImport()" class="bg-violet-600 hover:bg-violet-500 text-white text-lg font-bold py-3 px-3 rounded-xl shadow border border-violet-300 flex items-center justify-center gap-2 whitespace-nowrap sm:col-span-2">
                     📥 還原備份資料
                 </button>
                 <input type="file" id="importFile" accept=".json,application/json,text/plain" class="hidden" onchange="importBackup(event)">
@@ -141,14 +141,14 @@
         </section>
 
         <!-- 所有打卡紀錄清單管理 -->
-        <section class="bg-slate-900 border-4 border-purple-400 rounded-3xl p-5 shadow-2xl space-y-4">
-            <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-xl font-black py-4 px-4 rounded-2xl shadow-xl border-4 border-purple-300 flex items-center justify-between whitespace-nowrap">
+        <section class="bg-slate-900 border-2 border-purple-400/60 rounded-2xl p-4 shadow-xl space-y-4">
+            <button onclick="toggleHistoryWarehouse()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-lg sm:text-xl font-bold py-3 px-4 rounded-xl shadow-md border border-purple-300 flex items-center justify-between whitespace-nowrap">
                 <span>📦 詳細打卡紀錄列表</span>
-                <span id="warehouseToggleText" class="text-amber-300 text-lg">[ 展開 🔽 ]</span>
+                <span id="warehouseToggleText" class="text-amber-300">[ 展開 🔽 ]</span>
             </button>
             
-            <div id="historyWarehouseContainer" class="hidden space-y-4 pt-4 border-t-2 border-purple-800">
-                <div id="allRecordList" class="space-y-4">
+            <div id="historyWarehouseContainer" class="hidden space-y-3 pt-3 border-t border-purple-900">
+                <div id="allRecordList" class="space-y-3">
                     <!-- 紀錄選單清單渲染區域 -->
                 </div>
             </div>
@@ -156,29 +156,29 @@
 
         <!-- 彈窗與二次確認 -->
         <div id="msgModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl">
-                <p id="msgText" class="text-2xl font-bold text-amber-300 mb-6"></p>
-                <button onclick="closeModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-4 rounded-2xl shadow-lg border-2 border-emerald-400">
+            <div class="bg-slate-900 border-2 border-amber-400 rounded-2xl p-6 max-w-md w-full text-center shadow-2xl">
+                <p id="msgText" class="text-xl font-bold text-amber-300 mb-6"></p>
+                <button onclick="closeModal()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xl font-black py-3 rounded-xl shadow-lg border border-emerald-400">
                     確定知道了 👍
                 </button>
             </div>
         </div>
 
         <div id="deleteModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl space-y-6">
-                <p class="text-2xl font-bold text-rose-300">⚠️ 請問確定要刪除這筆回憶紀錄嗎？</p>
+            <div class="bg-slate-900 border-2 border-rose-500 rounded-2xl p-6 max-w-md w-full text-center shadow-2xl space-y-6">
+                <p class="text-xl font-bold text-rose-300">⚠️ 請問確定要刪除這筆回憶紀錄嗎？</p>
                 <div class="flex gap-4">
-                    <button onclick="closeDeleteModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-slate-500">
+                    <button onclick="closeDeleteModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg border border-slate-500">
                         取消
                     </button>
-                    <button id="confirmDeleteBtn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xl font-bold py-4 rounded-2xl shadow-lg border-2 border-rose-400">
+                    <button id="confirmDeleteBtn" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-lg font-bold py-3 rounded-xl shadow-lg border border-rose-400">
                         確定刪除 🗑️
                     </button>
                 </div>
             </div>
         </div>
 
-        <footer class="text-center text-slate-400 text-base pb-8">
+        <footer class="text-center text-slate-400 text-base pb-6">
             <p>❤️ 專為旅遊設計的安心足跡紀錄系統</p>
         </footer>
     </div>
@@ -318,7 +318,7 @@
                 (position) => {
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
-                    statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-base text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
+                    statusDiv.innerHTML = `✅ 已成功取得定位！<br><span class="text-sm text-slate-300">緯度: ${currentLat.toFixed(4)}, 經度: ${currentLng.toFixed(4)}</span>`;
                     onSelectLocationChange();
                 },
                 (error) => {
@@ -368,22 +368,22 @@
         function renderRecordList() {
             const container = document.getElementById('allRecordList');
             if (allRecords.length === 0) {
-                container.innerHTML = `<div class="p-6 bg-slate-950 rounded-2xl text-center text-slate-400 text-xl">目前尚無歷史紀錄。</div>`;
+                container.innerHTML = `<div class="p-4 bg-slate-950 rounded-xl text-center text-slate-400 text-lg">目前尚無歷史紀錄。</div>`;
                 return;
             }
 
             container.innerHTML = allRecords.map((item, index) => {
                 return `
-                    <div class="bg-slate-950 border-4 border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2 shadow">
                         <div class="flex justify-between items-start">
-                            <h3 class="text-xl font-black text-amber-300">📌 ${escapeHtml(item.desc)}</h3>
-                            <span class="text-sm bg-slate-900 text-cyan-300 px-3 py-1 rounded-xl border border-cyan-700">${item.time}</span>
+                            <h3 class="text-lg font-bold text-amber-300">📌 ${escapeHtml(item.desc)}</h3>
+                            <span class="text-xs bg-slate-900 text-cyan-300 px-2 py-1 rounded-lg border border-cyan-800">${item.time}</span>
                         </div>
-                        <div class="flex gap-2 pt-2">
-                            <button onclick="selectAndFocusMap(${index})" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-lg font-bold py-3 px-3 rounded-xl text-center border-2 border-cyan-300 shadow whitespace-nowrap">
+                        <div class="flex gap-2 pt-1">
+                            <button onclick="selectAndFocusMap(${index})" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-base font-bold py-2.5 px-3 rounded-lg text-center border border-cyan-400 shadow whitespace-nowrap">
                                 🗺️ 地圖定位
                             </button>
-                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-lg font-bold py-3 px-4 rounded-xl border-2 border-rose-400 shadow whitespace-nowrap">
+                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-base font-bold py-2.5 px-3 rounded-lg border border-rose-400 shadow whitespace-nowrap">
                                 🗑️ 刪除
                             </button>
                         </div>
@@ -469,7 +469,6 @@
             const fileName = `travel_footprint_backup_${dateStr}.json`;
             const jsonString = JSON.stringify(allRecords, null, 2);
 
-            // 1. 優先嘗試手機原生「分享選單」(可直接存到 iPhone iCloud「儲存到檔案」或 Android Google 雲端硬碟 / LINE Keep)
             try {
                 const file = new File([jsonString], fileName, { type: "application/json" });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -478,15 +477,13 @@
                         title: '旅遊足跡備份資料',
                         text: '請選擇「儲存到檔案 (iCloud)」或傳送到雲端保存'
                     });
-                    return; // 分享成功即結束
+                    return;
                 }
             } catch (err) {
-                // 若使用者主動取消分享視窗則不報錯，其餘錯誤退回一般下載
                 if (err.name === 'AbortError') return;
                 console.log("改用一般下載模式", err);
             }
 
-            // 2. 電腦版或不支援檔案分享的瀏覽器：退回傳統下載模式
             const blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
@@ -525,7 +522,6 @@
                 }
             };
             reader.readAsText(file);
-            // 清空 input 值，確保下次選同一個檔案也能觸發 onchange
             event.target.value = '';
         }
 
