@@ -51,9 +51,8 @@
 <body class="bg-slate-950 text-white min-h-screen px-4 py-5 font-sans">
 
     <div class="max-w-2xl mx-auto space-y-5">
-        <!-- 品牌視覺頂部標題列（替換為你設計的 Logo） -->
+        <!-- 品牌視覺頂部標題列 -->
         <header class="bg-gradient-to-r from-slate-900 via-[#13233c] to-slate-900 border-2 border-amber-400/90 rounded-2xl p-3.5 sm:p-4 shadow-xl flex items-center justify-center gap-3.5 sm:gap-4">
-            <!-- 使用者設計專屬 Logo SVG -->
             <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl overflow-hidden shadow-lg border-2 border-sky-300/70 bg-[#8ED6EE]">
                 <svg id="brandLogoSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" class="w-full h-full">
                     <defs>
@@ -67,18 +66,12 @@
                         </clipPath>
                     </defs>
 
-                    <!-- 外圍天藍色背景 -->
                     <rect width="1024" height="1024" fill="#8ED6EE"/>
-
-                    <!-- 左上粉紅星星 -->
                     <polygon points="155,48 184,116 258,122 201,170 219,242 155,203 91,242 109,170 52,122 126,116"
                              fill="#F4A3B8" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"/>
-
-                    <!-- 右上方紫色六角星 -->
                     <polygon points="732,102 749,144 794,148 760,178 770,222 732,198 694,222 704,178 670,148 715,144"
                              fill="#C084FC" fill-opacity="0.38" stroke="#8B3A9E" stroke-width="7" stroke-linejoin="round"/>
 
-                    <!-- 右上太陽與光芒 -->
                     <g stroke="#DC3545" stroke-width="14" stroke-linecap="round">
                         <line x1="875" y1="35" x2="875" y2="78"/>
                         <line x1="875" y1="212" x2="875" y2="255"/>
@@ -99,7 +92,6 @@
                     </g>
                     <circle cx="875" cy="145" r="46" fill="#EE2B2B"/>
 
-                    <!-- 下方水草線條 -->
                     <g fill="none" stroke-linecap="round">
                         <path d="M 38 972 Q 26 840 44 725" stroke="#2E9E5B" stroke-width="11"/>
                         <path d="M 68 975 Q 84 865 66 775" stroke="#8FD14F" stroke-width="9"/>
@@ -115,7 +107,6 @@
                         <path d="M 976 978 Q 988 895 972 820" stroke="#8FD14F" stroke-width="9"/>
                     </g>
 
-                    <!-- 右下小魚輪廓 -->
                     <g transform="translate(808, 922)" fill="none" stroke="#9B2C2C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M -75 0 C -55 -35, 25 -35, 62 0 C 25 35, -55 35, -75 0 Z"/>
                         <polygon points="62,0 98,-26 88,0 98,26"/>
@@ -126,10 +117,8 @@
                         <circle cx="-48" cy="-6" r="4" fill="#9B2C2C"/>
                     </g>
 
-                    <!-- 中央深藍地球 -->
                     <circle cx="520" cy="508" r="395" fill="url(#earthGradCustom)" stroke="#1E3A5F" stroke-width="12"/>
 
-                    <!-- 地球經緯線 -->
                     <g clip-path="url(#earthClipCustom)" fill="none" stroke="#64748B" stroke-opacity="0.45" stroke-width="9">
                         <ellipse cx="520" cy="508" rx="145" ry="395"/>
                         <ellipse cx="520" cy="508" rx="285" ry="395"/>
@@ -138,7 +127,6 @@
                         <path d="M 125 676 Q 520 621 915 676"/>
                     </g>
 
-                    <!-- 淺藍虛線軌跡 -->
                     <path d="M 332 478
                              C 295 565, 315 655, 355 715
                              C 415 795, 515 675, 555 645
@@ -149,7 +137,6 @@
                           stroke-linecap="round"
                           stroke-dasharray="28 24"/>
 
-                    <!-- 左上青綠地圖釘 -->
                     <g transform="translate(328, 325) rotate(8)">
                         <path d="M 0 -152
                                  C 82 -152, 142 -92, 142 -14
@@ -160,7 +147,6 @@
                         <circle cx="0" cy="-22" r="46" fill="#FFFFFF"/>
                     </g>
 
-                    <!-- 左下黃色腳印（五趾造型） -->
                     <g transform="translate(415, 685) rotate(-14) scale(1.18)">
                         <path d="M -46 -22
                                  C -56 -88, 52 -88, 52 -16
@@ -175,7 +161,6 @@
                         <ellipse cx="-58" cy="-96" rx="12" ry="15" transform="rotate(-20 -58 -96)" fill="#FACC15"/>
                     </g>
 
-                    <!-- 右上黃色腳印（放大、往前錯落，五趾造型） -->
                     <g transform="translate(625, 482) rotate(16) scale(1.36)">
                         <path d="M -48 -24
                                  C -58 -92, 54 -92, 54 -18
@@ -190,7 +175,6 @@
                         <ellipse cx="56" cy="-98" rx="12" ry="16" transform="rotate(20 56 -98)" fill="#FACC15"/>
                     </g>
 
-                    <!-- 右下黃色確認對勾 -->
                     <g transform="translate(748, 818)">
                         <path d="M -52 12 L -8 54 L 82 -44"
                               fill="none"
@@ -208,7 +192,6 @@
                 </svg>
             </div>
 
-            <!-- 標題與副標 -->
             <div class="text-left">
                 <h1 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide leading-tight">
                     旅遊足跡與打卡系統
@@ -240,7 +223,6 @@
                 </div>
             </div>
 
-            <!-- 新增打卡欄位 -->
             <div class="pt-3 border-t border-slate-800 space-y-3">
                 <h2 class="text-lg sm:text-xl font-bold text-cyan-300">
                     ✍️ 新增旅遊駐點打卡
@@ -307,19 +289,36 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="retroLat" class="block text-sm font-bold text-slate-300 mb-1">緯度 (Lat)</label>
-                        <input type="number" step="any" id="retroLat" placeholder="例如 22.6273" onchange="previewRetroOnMap()" class="w-full bg-slate-950 text-cyan-300 font-mono border border-slate-600 rounded-xl p-3 text-base focus:outline-none focus:border-cyan-400">
+                        <input type="number" step="any" id="retroLat" placeholder="例如 22.6273" onchange="onRetroCoordManualChange()" class="w-full bg-slate-950 text-cyan-300 font-mono border border-slate-600 rounded-xl p-3 text-base focus:outline-none focus:border-cyan-400">
                     </div>
                     <div>
                         <label for="retroLng" class="block text-sm font-bold text-slate-300 mb-1">經度 (Lng)</label>
-                        <input type="number" step="any" id="retroLng" placeholder="例如 120.3014" onchange="previewRetroOnMap()" class="w-full bg-slate-950 text-cyan-300 font-mono border border-slate-600 rounded-xl p-3 text-base focus:outline-none focus:border-cyan-400">
+                        <input type="number" step="any" id="retroLng" placeholder="例如 120.3014" onchange="onRetroCoordManualChange()" class="w-full bg-slate-950 text-cyan-300 font-mono border border-slate-600 rounded-xl p-3 text-base focus:outline-none focus:border-cyan-400">
                     </div>
                 </div>
 
-                <div>
-                    <label for="retroDesc" class="block text-base font-bold text-amber-200 mb-1">
-                        ✍️ 景點名稱與回憶亮點：
-                    </label>
-                    <input type="text" id="retroDesc" placeholder="例如：白川鄉合掌村展望台（雪景超美）" class="w-full bg-slate-950 text-white border-2 border-amber-400/80 rounded-xl p-3 text-xl placeholder-slate-500 focus:outline-none">
+                <!-- 300 公尺內附近景點/商店下拉選單 + 手動輸入 -->
+                <div class="bg-slate-950/90 p-3 rounded-xl border border-amber-500/40 space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <label for="nearbyPoiSelect" class="block text-base font-bold text-amber-200">
+                            🧭 座標 300 公尺內景點／商店快選：
+                        </label>
+                        <button type="button" id="refreshPoiBtn" onclick="fetchNearbyPlaces300m()" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-1.5 rounded-lg border border-cyan-600/60 whitespace-nowrap">
+                            🔄 重新搜尋
+                        </button>
+                    </div>
+                    <div id="nearbyPoiStatus" class="text-xs text-slate-400">
+                        取得 GPS 座標後，將自動搜尋方圓 300 公尺內的景點或商店供選取；若無資料可直接手動輸入。
+                    </div>
+                    <select id="nearbyPoiSelect" onchange="onNearbyPoiSelectChange()" class="hidden w-full bg-slate-900 text-amber-300 font-bold border-2 border-amber-400/80 rounded-xl p-3 text-base focus:outline-none">
+                    </select>
+
+                    <div>
+                        <label for="retroDesc" class="block text-base font-bold text-amber-200 mb-1">
+                            ✍️ 景點名稱與回憶亮點（可選填或手動輸入）：
+                        </label>
+                        <input type="text" id="retroDesc" placeholder="例如：白川鄉合掌村展望台（雪景超美）" class="w-full bg-slate-900 text-white border-2 border-amber-400/80 rounded-xl p-3 text-xl placeholder-slate-500 focus:outline-none">
+                    </div>
                 </div>
 
                 <button onclick="saveRetroCheckIn()" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xl font-black py-4 px-4 rounded-xl shadow-md border-2 border-amber-300 flex items-center justify-center gap-2 whitespace-nowrap transition-transform active:scale-95">
@@ -471,6 +470,7 @@
         let mapMarker = null;
         let isMapPickMode = false;
         let exifrFallbackTried = false;
+        let poiSearchToken = 0;
 
         function loadExifrFallback() {
             if (exifrFallbackTried) return;
@@ -537,8 +537,8 @@
                     .openPopup();
 
                 toggleMapPickMode(false);
-                showModal(`✅ 已從地圖抓取座標！\n緯度: ${lat}, 經度: ${lng}\n請接著輸入景點名稱並儲存。`);
-                document.getElementById('retroDesc').focus();
+                fetchNearbyPlaces300m(lat, lng);
+                showModal(`✅ 已從地圖抓取座標！\n緯度: ${lat}, 經度: ${lng}\n正在搜尋 300 公尺內景點／商店...`);
             });
         }
 
@@ -664,12 +664,14 @@
                 document.getElementById('retroLat').value = lat;
                 document.getElementById('retroLng').value = lng;
                 previewRetroOnMap();
+                fetchNearbyPlaces300m(lat, lng);
+            } else {
+                resetNearbyPoiUi("此照片未包含 GPS 座標，請改用手動輸入景點名稱，或先指定座標。");
             }
 
             if (foundGps && foundTime) {
-                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}）！</span>`;
-                showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n請輸入景點名稱並按「儲存事後回憶補登」。`);
-                document.getElementById('retroDesc').focus();
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}），正搜尋 300m 內景點／商店...</span>`;
+                showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n系統正在查詢方圓 300 公尺內的景點或商店，您可直接從下拉選單挑選或手動輸入。`);
             } else if (foundTime && !foundGps) {
                 const detail = gpsErr
                     ? `解析 GPS 時發生錯誤（${gpsErr}），可能是 HEIC 格式在目前瀏覽器受限。`
@@ -678,7 +680,7 @@
                 showModal(`⚠️ 已帶入照片時間，但未取得 GPS 座標\n\n原因：${detail}\n\n解法：請點選「📍 開啟點擊下方地圖選點模式」，直接在下方地圖點選位置即可補齊！`);
             } else if (!foundTime && foundGps) {
                 const detail = metaErr ? `讀取日期標籤失敗（${metaErr}）` : "照片未記錄原始拍攝日期時間，已保留目前選擇的日期時間。";
-                statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ 已帶入 GPS 座標（${lat}, ${lng}），但未抓到拍攝時間。</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
+                statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ 已帶入 GPS 座標（${lat}, ${lng}），正搜尋 300m 內景點／商店...</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
                 showModal(`✅ 已帶入 GPS 座標（${lat}, ${lng}）\n\n提醒：${detail} 請確認上方「當時抵達的日期與時間」是否正確。`);
             } else {
                 const techReason = (gpsErr || metaErr)
@@ -689,6 +691,168 @@
             }
 
             event.target.value = '';
+        }
+
+        function resetNearbyPoiUi(message) {
+            const selectEl = document.getElementById('nearbyPoiSelect');
+            const statusEl = document.getElementById('nearbyPoiStatus');
+            const refreshBtn = document.getElementById('refreshPoiBtn');
+            selectEl.innerHTML = '';
+            selectEl.classList.add('hidden');
+            refreshBtn.classList.add('hidden');
+            if (message) {
+                statusEl.innerHTML = `<span class="text-slate-400">${escapeHtml(message)}</span>`;
+            }
+        }
+
+        function onRetroCoordManualChange() {
+            previewRetroOnMap();
+            const lat = parseFloat(document.getElementById('retroLat').value);
+            const lng = parseFloat(document.getElementById('retroLng').value);
+            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                fetchNearbyPlaces300m(lat, lng);
+            }
+        }
+
+        // 查詢座標 300 公尺內的重要景點、商店、餐廳等具名稱目標（OpenStreetMap Overpass API）
+        async function fetchNearbyPlaces300m(givenLat, givenLng) {
+            const lat = (typeof givenLat === 'number') ? givenLat : parseFloat(document.getElementById('retroLat').value);
+            const lng = (typeof givenLng === 'number') ? givenLng : parseFloat(document.getElementById('retroLng').value);
+
+            const selectEl = document.getElementById('nearbyPoiSelect');
+            const statusEl = document.getElementById('nearbyPoiStatus');
+            const refreshBtn = document.getElementById('refreshPoiBtn');
+
+            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                resetNearbyPoiUi("請先取得或輸入有效的經緯度座標。");
+                return;
+            }
+
+            const token = ++poiSearchToken;
+            refreshBtn.classList.remove('hidden');
+            selectEl.classList.add('hidden');
+            statusEl.innerHTML = `<span class="animate-spin-custom">🔍</span> 正在搜尋（${lat.toFixed(5)}, ${lng.toFixed(5)}）方圓 300 公尺內的景點與商店...`;
+
+            const query = `
+                [out:json][timeout:10];
+                (
+                  nwr(around:300,${lat},${lng})["name"]["tourism"];
+                  nwr(around:300,${lat},${lng})["name"]["shop"];
+                  nwr(around:300,${lat},${lng})["name"]["amenity"];
+                  nwr(around:300,${lat},${lng})["name"]["historic"];
+                  nwr(around:300,${lat},${lng})["name"]["leisure"];
+                );
+                out center 40;
+            `;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            try {
+                const res = await fetch("https://overpass-api.de/api/interpreter", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                    body: "data=" + encodeURIComponent(query),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (token !== poiSearchToken) return;
+                if (!res.ok) {
+                    throw new Error(`伺服器回應狀態 ${res.status}`);
+                }
+
+                const data = await res.json();
+                const elements = Array.isArray(data?.elements) ? data.elements : [];
+
+                const seenNames = new Set();
+                const candidates = [];
+
+                for (const el of elements) {
+                    const tags = el.tags || {};
+                    const rawName = (tags["name:zh-Hant"] || tags["name:zh"] || tags.name || "").trim();
+                    if (!rawName) continue;
+
+                    const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
+                    const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
+                    const distMeters = (typeof pLat === 'number' && typeof pLng === 'number')
+                        ? Math.round(calculateDistance(lat, lng, pLat, pLng) * 1000)
+                        : null;
+
+                    if (distMeters !== null && distMeters > 320) continue;
+
+                    const category = tags.tourism || tags.historic || tags.leisure || tags.shop || tags.amenity || "地點";
+                    const key = rawName.toLowerCase();
+
+                    if (!seenNames.has(key)) {
+                        seenNames.add(key);
+                        candidates.push({
+                            name: rawName,
+                            category: category,
+                            dist: distMeters ?? 999
+                        });
+                    } else {
+                        const existing = candidates.find(c => c.name.toLowerCase() === key);
+                        if (existing && distMeters !== null && distMeters < existing.dist) {
+                            existing.dist = distMeters;
+                        }
+                    }
+                }
+
+                candidates.sort((a, b) => a.dist - b.dist);
+                const topList = candidates.slice(0, 25);
+
+                if (topList.length === 0) {
+                    selectEl.innerHTML = '';
+                    selectEl.classList.add('hidden');
+                    statusEl.innerHTML = `<span class="text-amber-300 font-bold">ℹ️ 座標 300 公尺內未找到已命名的景點或商店。</span><br>請直接在下方「景點名稱與回憶亮點」欄位手動輸入！`;
+                    return;
+                }
+
+                selectEl.innerHTML = '';
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.text = `▼ 找到 ${topList.length} 處 300m 內地點，點此選取...`;
+                selectEl.add(defaultOpt);
+
+                topList.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.name;
+                    const distText = item.dist < 999 ? `約 ${item.dist}m` : "300m內";
+                    opt.text = `📍 ${item.name}（${distText}・${item.category}）`;
+                    selectEl.add(opt);
+                });
+
+                const manualOpt = document.createElement('option');
+                manualOpt.value = "__MANUAL__";
+                manualOpt.text = "✍️ 找不到想要的名稱，改用手動輸入...";
+                selectEl.add(manualOpt);
+
+                selectEl.classList.remove('hidden');
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 已列出 300 公尺內 ${topList.length} 筆景點／商店</span>，可直接點選帶入，或改用手動輸入。`;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (token !== poiSearchToken) return;
+                console.warn("查詢 300m 附近地點失敗：", err);
+                selectEl.innerHTML = '';
+                selectEl.classList.add('hidden');
+                statusEl.innerHTML = `<span class="text-amber-300 font-bold">⚠️ 附近地點查詢逾時或暫時無法連線。</span><br>沒關係，請直接在下方「景點名稱與回憶亮點」手動輸入即可！`;
+            }
+        }
+
+        function onNearbyPoiSelectChange() {
+            const selectEl = document.getElementById('nearbyPoiSelect');
+            const descInput = document.getElementById('retroDesc');
+            const val = selectEl.value;
+
+            if (!val) return;
+            if (val === "__MANUAL__") {
+                descInput.value = '';
+                descInput.focus();
+                return;
+            }
+
+            descInput.value = val;
         }
 
         function parseLocationInput() {
@@ -708,7 +872,8 @@
                     document.getElementById('retroLat').value = lat;
                     document.getElementById('retroLng').value = lng;
                     previewRetroOnMap();
-                    showModal(`✅ 成功解析座標！\n緯度: ${lat}, 經度: ${lng}`);
+                    fetchNearbyPlaces300m(lat, lng);
+                    showModal(`✅ 成功解析座標！\n緯度: ${lat}, 經度: ${lng}\n正在搜尋 300 公尺內景點／商店...`);
                     return;
                 }
             }
@@ -742,7 +907,7 @@
                 return;
             }
             if (!desc) {
-                showModal("請輸入景點名稱或回憶亮點！");
+                showModal("請從下拉選單挑選或手動輸入景點名稱！");
                 document.getElementById('retroDesc').focus();
                 return;
             }
@@ -784,6 +949,7 @@
             document.getElementById('retroLat').value = '';
             document.getElementById('retroLng').value = '';
             document.getElementById('gmapsUrlInput').value = '';
+            resetNearbyPoiUi("取得 GPS 座標後，將自動搜尋方圓 300 公尺內的景點或商店供選取；若無資料可直接手動輸入。");
             document.getElementById('exifStatus').innerText = '支援 iPhone / Android 含定位資訊之原始照片（選照片時請確認「選項 → 位置」已開啟）';
 
             showModal("🎉 回憶補登成功！已自動依日期時間順序排入足跡清單！");
@@ -993,7 +1159,6 @@
             }).join('');
         }
 
-        // 開啟修改名稱彈窗
         function openEditModal(index) {
             const item = allRecords[index];
             if (!item) return;
