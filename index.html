@@ -297,23 +297,26 @@
                     </div>
                 </div>
 
-                <!-- 附近景點/商店下拉選單 + 擴大搜尋 + 手動輸入 -->
+                <!-- 附近景點/商店下拉選單（Photon 秒抓地標 + Overpass 細節補抓） -->
                 <div class="bg-slate-950/90 p-3 rounded-xl border border-amber-500/40 space-y-2.5">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <label for="nearbyPoiSelect" class="block text-base font-bold text-amber-200">
-                            🧭 附近景點／商店快選：
+                            🧭 附近重要景點／商家快選：
                         </label>
-                        <div class="flex gap-1.5" id="poiActionBtns">
-                            <button type="button" id="refreshPoiBtn" onclick="fetchNearbyPlaces(300)" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-1.5 rounded-lg border border-cyan-600/60 whitespace-nowrap">
-                                🔄 重搜 300m
+                        <div class="flex flex-wrap gap-1.5" id="poiActionBtns">
+                            <button type="button" id="quickPoiBtn" onclick="searchNearbyHybrid(300, false)" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-1.5 rounded-lg border border-cyan-600/60 whitespace-nowrap">
+                                ⚡ 秒搜地標
                             </button>
-                            <button type="button" id="widenPoiBtn" onclick="fetchNearbyPlaces(1000)" class="hidden text-xs bg-amber-950 hover:bg-amber-900 text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-500/60 whitespace-nowrap">
+                            <button type="button" id="deepPoiBtn" onclick="searchNearbyHybrid(350, true)" class="hidden text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-300 px-2.5 py-1.5 rounded-lg border border-emerald-500/60 whitespace-nowrap">
+                                ✨ 深度補抓小店
+                            </button>
+                            <button type="button" id="widenPoiBtn" onclick="searchNearbyHybrid(1000, true)" class="hidden text-xs bg-amber-950 hover:bg-amber-900 text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-500/60 whitespace-nowrap">
                                 🔍 擴大 1000m
                             </button>
                         </div>
                     </div>
                     <div id="nearbyPoiStatus" class="text-xs text-slate-400 leading-relaxed">
-                        取得 GPS 座標後，將自動搜尋方圓 300 公尺內的景點或商店供選取；若無資料可直接手動輸入。
+                        取得 GPS 座標後，將優先秒抓附近重要景點、車站與知名店家；若需巷弄小店可點「✨ 深度補抓小店」。
                     </div>
                     <select id="nearbyPoiSelect" onchange="onNearbyPoiSelectChange()" class="hidden w-full bg-slate-900 text-amber-300 font-bold border-2 border-amber-400/80 rounded-xl p-3 text-base focus:outline-none">
                     </select>
@@ -477,6 +480,59 @@
         let exifrFallbackTried = false;
         let poiSearchToken = 0;
 
+        // 重要景點與商家標籤中文化對照表
+        const OSM_CATEGORY_ZH = {
+            attraction: "景點",
+            viewpoint: "觀景台",
+            museum: "博物館",
+            theme_park: "樂園",
+            zoo: "動物園",
+            aquarium: "水族館",
+            gallery: "美術館",
+            artwork: "地標藝術",
+            information: "遊客中心",
+            hotel: "飯店",
+            guest_house: "民宿",
+            camp_site: "露營區",
+            monument: "紀念碑",
+            memorial: "紀念館",
+            castle: "城堡/古蹟",
+            ruins: "遺跡",
+            archaeological_site: "古蹟",
+            wayside_shrine: "神社/祠堂",
+            park: "公園",
+            garden: "花園",
+            nature_reserve: "保護區",
+            playground: "遊憩區",
+            station: "車站",
+            halt: "車站",
+            tram_stop: "電車站",
+            subway_entrance: "地鐵站",
+            ferry_terminal: "碼頭",
+            restaurant: "餐廳",
+            cafe: "咖啡廳",
+            fast_food: "小吃/速食",
+            food_court: "美食街",
+            ice_cream: "冰品",
+            place_of_worship: "寺廟/神社",
+            marketplace: "市場",
+            supermarket: "超市",
+            convenience: "超商",
+            bakery: "烘焙坊",
+            souvenir: "伴手禮",
+            gift: "禮品店",
+            mall: "購物中心",
+            department_store: "百貨",
+            tea: "茶行/茶飲",
+            coffee: "咖啡店"
+        };
+
+        function formatCategoryLabel(rawTag) {
+            if (!rawTag) return "地標";
+            const key = String(rawTag).toLowerCase();
+            return OSM_CATEGORY_ZH[key] || rawTag;
+        }
+
         function loadExifrFallback() {
             if (exifrFallbackTried) return;
             exifrFallbackTried = true;
@@ -542,8 +598,8 @@
                     .openPopup();
 
                 toggleMapPickMode(false);
-                fetchNearbyPlaces(300, lat, lng);
-                showModal(`✅ 已從地圖抓取座標！\n緯度: ${lat}, 經度: ${lng}\n正在搜尋 300 公尺內景點／商店...`);
+                searchNearbyHybrid(300, false, lat, lng);
+                showModal(`✅ 已從地圖抓取座標！\n緯度: ${lat}, 經度: ${lng}\n正在秒搜附近重要景點與商家...`);
             });
         }
 
@@ -669,14 +725,14 @@
                 document.getElementById('retroLat').value = lat;
                 document.getElementById('retroLng').value = lng;
                 previewRetroOnMap();
-                fetchNearbyPlaces(300, lat, lng);
+                searchNearbyHybrid(300, false, lat, lng);
             } else {
                 resetNearbyPoiUi("此照片未包含 GPS 座標，請改用手動輸入景點名稱，或先指定座標。");
             }
 
             if (foundGps && foundTime) {
-                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}），正搜尋 300m 內景點／商店...</span>`;
-                showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n系統正在查詢方圓 300 公尺內的景點或商店，您可直接從下拉選單挑選或手動輸入。`);
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}），正秒搜附近重要景點...</span>`;
+                showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n系統正在秒搜附近重要景點、車站與知名店家，您可直接從下拉選單挑選或手動輸入。`);
             } else if (foundTime && !foundGps) {
                 const detail = gpsErr
                     ? `解析 GPS 時發生錯誤（${gpsErr}），可能是 HEIC 格式在目前瀏覽器受限。`
@@ -685,7 +741,7 @@
                 showModal(`⚠️ 已帶入照片時間，但未取得 GPS 座標\n\n原因：${detail}\n\n解法：請點選「📍 開啟點擊下方地圖選點模式」，直接在下方地圖點選位置即可補齊！`);
             } else if (!foundTime && foundGps) {
                 const detail = metaErr ? `讀取日期標籤失敗（${metaErr}）` : "照片未記錄原始拍攝日期時間，已保留目前選擇的日期時間。";
-                statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ 已帶入 GPS 座標（${lat}, ${lng}），正搜尋 300m 內景點／商店...</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
+                statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ 已帶入 GPS 座標（${lat}, ${lng}），正秒搜附近重要景點...</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
                 showModal(`✅ 已帶入 GPS 座標（${lat}, ${lng}）\n\n提醒：${detail} 請確認上方「當時抵達的日期與時間」是否正確。`);
             } else {
                 const techReason = (gpsErr || metaErr)
@@ -701,11 +757,13 @@
         function resetNearbyPoiUi(message) {
             const selectEl = document.getElementById('nearbyPoiSelect');
             const statusEl = document.getElementById('nearbyPoiStatus');
-            const refreshBtn = document.getElementById('refreshPoiBtn');
+            const quickBtn = document.getElementById('quickPoiBtn');
+            const deepBtn = document.getElementById('deepPoiBtn');
             const widenBtn = document.getElementById('widenPoiBtn');
             selectEl.innerHTML = '';
             selectEl.classList.add('hidden');
-            refreshBtn.classList.add('hidden');
+            quickBtn.classList.add('hidden');
+            deepBtn.classList.add('hidden');
             widenBtn.classList.add('hidden');
             if (message) {
                 statusEl.innerHTML = `<span class="text-slate-400">${escapeHtml(message)}</span>`;
@@ -717,25 +775,74 @@
             const lat = parseFloat(document.getElementById('retroLat').value);
             const lng = parseFloat(document.getElementById('retroLng').value);
             if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                fetchNearbyPlaces(300, lat, lng);
+                searchNearbyHybrid(300, false, lat, lng);
             }
         }
 
-        // 精簡查詢範圍並輪詢多個 Overpass 節點，降低逾時機率
-        async function queryOverpassWithFallback(radiusMeters, lat, lng, onTryNode) {
+        // 第一層：Photon 輕量免費地標秒搜（幾乎不逾時，抓重要景點、車站、建築、知名店家）
+        async function fetchPhotonNearby(lat, lng, maxDistMeters = 500) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3800);
+            try {
+                const url = `https://photon.komoot.io/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&limit=18&radius=1`;
+                const res = await fetch(url, {
+                    headers: { "Accept": "application/json" },
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (!res.ok) return [];
+                const data = await res.json();
+                const features = Array.isArray(data?.features) ? data.features : [];
+                const results = [];
+
+                for (const f of features) {
+                    const props = f.properties || {};
+                    const name = (props.name || "").trim();
+                    if (!name) continue;
+
+                    // 過濾純街道或純行政區，保留景點、車站、商家、建築等重要地點
+                    const osmKey = props.osm_key || "";
+                    const osmVal = props.osm_value || "";
+                    const type = props.type || "";
+                    if (type === "street" || type === "city" || type === "district" || type === "county" || type === "state" || type === "country") {
+                        continue;
+                    }
+
+                    const coords = f.geometry?.coordinates;
+                    let distMeters = null;
+                    if (Array.isArray(coords) && coords.length >= 2) {
+                        distMeters = Math.round(calculateDistance(lat, lng, coords[1], coords[0]) * 1000);
+                    }
+                    if (distMeters !== null && distMeters > maxDistMeters) continue;
+
+                    results.push({
+                        name: name,
+                        category: formatCategoryLabel(osmVal || osmKey || "地標"),
+                        dist: distMeters ?? 999,
+                        source: "Photon"
+                    });
+                }
+                return results;
+            } catch (e) {
+                clearTimeout(timeoutId);
+                return [];
+            }
+        }
+
+        // 第二層：Overpass 精簡重要景點／商家查詢（只抓重點類別，避免逾時與雜項）
+        async function fetchOverpassFocused(radiusMeters, lat, lng) {
             const endpoints = [
                 { name: "Overpass DE", url: "https://overpass-api.de/api/interpreter" },
                 { name: "Overpass Kumi", url: "https://overpass.kumi.systems/api/interpreter" },
                 { name: "Overpass VK", url: "https://maps.mail.ru/osm/tools/overpass/api/interpreter" }
             ];
 
-            const query = `[out:json][timeout:6];(node(around:${radiusMeters},${lat},${lng})["name"]["tourism"];node(around:${radiusMeters},${lat},${lng})["name"]["shop"];node(around:${radiusMeters},${lat},${lng})["name"]["amenity"];node(around:${radiusMeters},${lat},${lng})["name"]["historic"];node(around:${radiusMeters},${lat},${lng})["name"]["leisure"];way(around:${radiusMeters},${lat},${lng})["name"]["tourism"];way(around:${radiusMeters},${lat},${lng})["name"]["shop"];way(around:${radiusMeters},${lat},${lng})["name"]["amenity"];);out center 35;`;
+            // 僅篩選重要旅遊類別：景點、古蹟、公園、車站、餐廳/咖啡/寺廟、主要商店
+            const query = `[out:json][timeout:5];(nwr(around:${radiusMeters},${lat},${lng})["name"]["tourism"];nwr(around:${radiusMeters},${lat},${lng})["name"]["historic"];nwr(around:${radiusMeters},${lat},${lng})["name"]["railway"~"station|halt|tram_stop|subway_entrance"];nwr(around:${radiusMeters},${lat},${lng})["name"]["amenity"~"restaurant|cafe|fast_food|food_court|place_of_worship|marketplace|ferry_terminal"];nwr(around:${radiusMeters},${lat},${lng})["name"]["shop"~"supermarket|convenience|bakery|souvenir|gift|mall|department_store|tea|coffee"];nwr(around:${radiusMeters},${lat},${lng})["name"]["leisure"~"park|garden|nature_reserve"];);out center 30;`;
 
-            let lastError = null;
             for (const ep of endpoints) {
-                if (typeof onTryNode === 'function') onTryNode(ep.name);
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4500);
+                const timeoutId = setTimeout(() => controller.abort(), 4200);
                 try {
                     const res = await fetch(ep.url, {
                         method: "POST",
@@ -744,22 +851,45 @@
                         signal: controller.signal
                     });
                     clearTimeout(timeoutId);
-                    if (!res.ok) {
-                        throw new Error(`${ep.name} HTTP ${res.status}`);
+                    if (!res.ok) continue;
+
+                    const data = await res.json();
+                    const elements = Array.isArray(data?.elements) ? data.elements : [];
+                    const results = [];
+
+                    for (const el of elements) {
+                        const tags = el.tags || {};
+                        const rawName = (tags["name:zh-Hant"] || tags["name:zh"] || tags.name || "").trim();
+                        if (!rawName) continue;
+
+                        const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
+                        const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
+                        const distMeters = (typeof pLat === 'number' && typeof pLng === 'number')
+                            ? Math.round(calculateDistance(lat, lng, pLat, pLng) * 1000)
+                            : null;
+
+                        if (distMeters !== null && distMeters > radiusMeters + 50) continue;
+
+                        const rawCat = tags.tourism || tags.historic || tags.railway || tags.amenity || tags.shop || tags.leisure || "景點";
+                        results.push({
+                            name: rawName,
+                            category: formatCategoryLabel(rawCat),
+                            dist: distMeters ?? 999,
+                            source: ep.name
+                        });
                     }
-                    const json = await res.json();
-                    return { data: json, sourceName: ep.name };
+                    return { items: results, sourceName: ep.name, ok: true };
                 } catch (err) {
                     clearTimeout(timeoutId);
-                    lastError = err;
                 }
             }
-            throw lastError || new Error("各節點皆逾時");
+            return { items: [], sourceName: "Overpass", ok: false };
         }
 
+        // 第三層保底：Nominatim 逆查地名
         async function fetchNominatimFallback(lat, lng) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4500);
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
             try {
                 const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1&accept-language=zh-TW,ja,en`;
                 const res = await fetch(url, {
@@ -778,39 +908,29 @@
             }
         }
 
-        function populatePoiSelectWithRef(selectEl, statusEl, radiusMeters, reverseName, noteText) {
-            selectEl.innerHTML = '';
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = "";
-            defaultOpt.text = reverseName
-                ? `▼ ${radiusMeters}m 景點快選逾時，提供 1 筆地名參考...`
-                : `▼ ${radiusMeters}m 內無資料，可改用手動輸入...`;
-            selectEl.add(defaultOpt);
-
-            if (reverseName) {
-                const refOpt = document.createElement('option');
-                refOpt.value = reverseName;
-                refOpt.text = `🗺️ ${reverseName}（地圖地名參考）`;
-                selectEl.add(refOpt);
-            }
-
-            const manualOpt = document.createElement('option');
-            manualOpt.value = "__MANUAL__";
-            manualOpt.text = "✍️ 改用手動輸入景點名稱...";
-            selectEl.add(manualOpt);
-
-            selectEl.classList.remove('hidden');
-            statusEl.innerHTML = noteText;
+        function mergeAndDedupePlaces(listA, listB) {
+            const mapByName = new Map();
+            [...listA, ...listB].forEach(item => {
+                const key = item.name.toLowerCase();
+                if (!mapByName.has(key)) {
+                    mapByName.set(key, { ...item });
+                } else {
+                    const prev = mapByName.get(key);
+                    if (item.dist < prev.dist) prev.dist = item.dist;
+                }
+            });
+            return Array.from(mapByName.values()).sort((a, b) => a.dist - b.dist).slice(0, 25);
         }
 
-        // 查詢座標附近景點、商店、餐廳等具名稱目標（預設 300m，支援擴大搜尋與多節點備援）
-        async function fetchNearbyPlaces(radiusMeters = 300, givenLat, givenLng) {
+        // 混合雙引擎搜尋：預設先用 Photon 秒抓重要地標；不足或使用者點擊深度補抓時，再呼叫精簡 Overpass
+        async function searchNearbyHybrid(radiusMeters = 300, forceDeepOverpass = false, givenLat, givenLng) {
             const lat = (typeof givenLat === 'number') ? givenLat : parseFloat(document.getElementById('retroLat').value);
             const lng = (typeof givenLng === 'number') ? givenLng : parseFloat(document.getElementById('retroLng').value);
 
             const selectEl = document.getElementById('nearbyPoiSelect');
             const statusEl = document.getElementById('nearbyPoiStatus');
-            const refreshBtn = document.getElementById('refreshPoiBtn');
+            const quickBtn = document.getElementById('quickPoiBtn');
+            const deepBtn = document.getElementById('deepPoiBtn');
             const widenBtn = document.getElementById('widenPoiBtn');
 
             if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -819,105 +939,90 @@
             }
 
             const token = ++poiSearchToken;
-            refreshBtn.classList.remove('hidden');
+            quickBtn.classList.remove('hidden');
+            deepBtn.classList.remove('hidden');
             widenBtn.classList.remove('hidden');
             selectEl.classList.add('hidden');
-            statusEl.innerHTML = `<span class="animate-spin-custom">🔍</span> 正在搜尋（${lat.toFixed(5)}, ${lng.toFixed(5)}）方圓 ${radiusMeters} 公尺內的景點與商店...`;
 
-            try {
-                const { data, sourceName } = await queryOverpassWithFallback(radiusMeters, lat, lng, (nodeName) => {
-                    if (token === poiSearchToken) {
-                        statusEl.innerHTML = `<span class="animate-spin-custom">🔍</span> 正在透過 ${escapeHtml(nodeName)} 搜尋 ${radiusMeters}m 內景點與商店...`;
-                    }
-                });
+            statusEl.innerHTML = `<span class="animate-spin-custom">⚡</span> 正在秒搜（${lat.toFixed(5)}, ${lng.toFixed(5)}）附近重要景點與地標...`;
+
+            // 1. 先執行 Photon 秒搜
+            const photonItems = await fetchPhotonNearby(lat, lng, Math.max(radiusMeters, 450));
+            if (token !== poiSearchToken) return;
+
+            let combined = mergeAndDedupePlaces(photonItems, []);
+            let usedSources = photonItems.length > 0 ? ["Photon 秒搜"] : [];
+            let overpassTimedOut = false;
+
+            // 2. 若使用者點了深度補抓/擴大範圍，或 Photon 抓到少於 3 筆，自動補呼叫精簡 Overpass
+            if (forceDeepOverpass || combined.length < 3) {
+                statusEl.innerHTML = `<span class="animate-spin-custom">🔍</span> ${combined.length > 0 ? `已先抓到 ${combined.length} 筆地標，` : ""}正補抓 ${radiusMeters}m 內重要景點與店家...`;
+                const ovRes = await fetchOverpassFocused(radiusMeters, lat, lng);
                 if (token !== poiSearchToken) return;
 
-                const elements = Array.isArray(data?.elements) ? data.elements : [];
-                const seenNames = new Set();
-                const candidates = [];
-
-                for (const el of elements) {
-                    const tags = el.tags || {};
-                    const rawName = (tags["name:zh-Hant"] || tags["name:zh"] || tags.name || "").trim();
-                    if (!rawName) continue;
-
-                    const pLat = typeof el.lat === 'number' ? el.lat : el.center?.lat;
-                    const pLng = typeof el.lon === 'number' ? el.lon : el.center?.lon;
-                    const distMeters = (typeof pLat === 'number' && typeof pLng === 'number')
-                        ? Math.round(calculateDistance(lat, lng, pLat, pLng) * 1000)
-                        : null;
-
-                    if (distMeters !== null && distMeters > radiusMeters + 50) continue;
-
-                    const category = tags.tourism || tags.historic || tags.leisure || tags.shop || tags.amenity || "地點";
-                    const key = rawName.toLowerCase();
-
-                    if (!seenNames.has(key)) {
-                        seenNames.add(key);
-                        candidates.push({
-                            name: rawName,
-                            category: category,
-                            dist: distMeters ?? 999
-                        });
-                    } else {
-                        const existing = candidates.find(c => c.name.toLowerCase() === key);
-                        if (existing && distMeters !== null && distMeters < existing.dist) {
-                            existing.dist = distMeters;
-                        }
-                    }
+                if (ovRes.ok) {
+                    combined = mergeAndDedupePlaces(combined, ovRes.items);
+                    if (ovRes.items.length > 0) usedSources.push(ovRes.sourceName);
+                } else {
+                    overpassTimedOut = true;
                 }
+            }
 
-                candidates.sort((a, b) => a.dist - b.dist);
-                const topList = candidates.slice(0, 25);
-
-                if (topList.length === 0) {
-                    const reverseName = await fetchNominatimFallback(lat, lng);
-                    if (token !== poiSearchToken) return;
-
-                    populatePoiSelectWithRef(
-                        selectEl,
-                        statusEl,
-                        radiusMeters,
-                        reverseName,
-                        `<span class="text-amber-300 font-bold">ℹ️ ${radiusMeters} 公尺內無已命名景點/商店</span>（${escapeHtml(sourceName)}），${reverseName ? "已帶出地名參考，" : ""}可點「🔍 擴大 1000m」或直接手動輸入。`
-                    );
-                    return;
-                }
+            // 3. 若雙引擎仍無結果，用 Nominatim 抓道路/區域地名保底
+            if (combined.length === 0) {
+                const reverseName = await fetchNominatimFallback(lat, lng);
+                if (token !== poiSearchToken) return;
 
                 selectEl.innerHTML = '';
                 const defaultOpt = document.createElement('option');
                 defaultOpt.value = "";
-                defaultOpt.text = `▼ 找到 ${topList.length} 處 ${radiusMeters}m 內地點，點此選取...`;
+                defaultOpt.text = reverseName
+                    ? `▼ ${radiusMeters}m 內無獨立景點，提供 1 筆地名參考...`
+                    : `▼ ${radiusMeters}m 內無景點資料，請改用手動輸入...`;
                 selectEl.add(defaultOpt);
 
-                topList.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.name;
-                    const distText = item.dist < 999 ? `約 ${item.dist}m` : `${radiusMeters}m內`;
-                    opt.text = `📍 ${item.name}（${distText}・${item.category}）`;
-                    selectEl.add(opt);
-                });
+                if (reverseName) {
+                    const refOpt = document.createElement('option');
+                    refOpt.value = reverseName;
+                    refOpt.text = `🗺️ ${reverseName}（地圖地名參考）`;
+                    selectEl.add(refOpt);
+                }
 
                 const manualOpt = document.createElement('option');
                 manualOpt.value = "__MANUAL__";
-                manualOpt.text = "✍️ 找不到想要的名稱，改用手動輸入...";
+                manualOpt.text = "✍️ 改用手動輸入景點名稱...";
                 selectEl.add(manualOpt);
 
                 selectEl.classList.remove('hidden');
-                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 已列出 ${radiusMeters} 公尺內 ${topList.length} 筆地點</span>（${escapeHtml(sourceName)}），可直接點選帶入或手動輸入。`;
-            } catch (err) {
-                if (token !== poiSearchToken) return;
-                const reverseName = await fetchNominatimFallback(lat, lng);
-                if (token !== poiSearchToken) return;
-
-                populatePoiSelectWithRef(
-                    selectEl,
-                    statusEl,
-                    radiusMeters,
-                    reverseName,
-                    `<span class="text-amber-300 font-bold">⚠️ 公開景點伺服器目前忙碌逾時</span>，${reverseName ? "已提供地圖地名參考供選取，" : ""}您可直接手動輸入景點名稱或按「🔄 重搜 300m」。`
-                );
+                const timeoutHint = overpassTimedOut ? "（細節伺服器忙碌，已自動切換快速備援）" : "";
+                statusEl.innerHTML = `<span class="text-amber-300 font-bold">ℹ️ ${radiusMeters} 公尺內無獨立景點標記</span>${timeoutHint}，${reverseName ? "已提供地名參考，" : ""}可點「🔍 擴大 1000m」或直接手動輸入。`;
+                return;
             }
+
+            // 渲染精選重要景點與店家下拉選單
+            selectEl.innerHTML = '';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = "";
+            defaultOpt.text = `▼ 精選 ${combined.length} 處附近重要景點／商家，點此選取...`;
+            selectEl.add(defaultOpt);
+
+            combined.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.name;
+                const distText = item.dist < 999 ? `約 ${item.dist}m` : "附近";
+                opt.text = `📍 ${item.name}（${distText}・${item.category}）`;
+                selectEl.add(opt);
+            });
+
+            const manualOpt = document.createElement('option');
+            manualOpt.value = "__MANUAL__";
+            manualOpt.text = "✍️ 找不到想要的名稱，改用手動輸入...";
+            selectEl.add(manualOpt);
+
+            selectEl.classList.remove('hidden');
+            const srcLabel = usedSources.length > 0 ? usedSources.join(" + ") : "Photon 秒搜";
+            const extraTip = (!forceDeepOverpass && !overpassTimedOut) ? "；若需更多巷弄小店可點「✨ 深度補抓小店」" : "";
+            statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 已精選 ${combined.length} 筆重要景點／商家</span>（${escapeHtml(srcLabel)}）${extraTip}。`;
         }
 
         function onNearbyPoiSelectChange() {
@@ -952,8 +1057,8 @@
                     document.getElementById('retroLat').value = lat;
                     document.getElementById('retroLng').value = lng;
                     previewRetroOnMap();
-                    fetchNearbyPlaces(300, lat, lng);
-                    showModal(`✅ 成功解析座標！\n緯度: ${lat}, 經度: ${lng}\n正在搜尋 300 公尺內景點／商店...`);
+                    searchNearbyHybrid(300, false, lat, lng);
+                    showModal(`✅ 成功解析座標！\n緯度: ${lat}, 經度: ${lng}\n正在秒搜附近重要景點與商家...`);
                     return;
                 }
             }
@@ -1029,7 +1134,7 @@
             document.getElementById('retroLat').value = '';
             document.getElementById('retroLng').value = '';
             document.getElementById('gmapsUrlInput').value = '';
-            resetNearbyPoiUi("取得 GPS 座標後，將自動搜尋方圓 300 公尺內的景點或商店供選取；若無資料可直接手動輸入。");
+            resetNearbyPoiUi("取得 GPS 座標後，將優先秒抓附近重要景點、車站與知名店家；若需巷弄小店可點「✨ 深度補抓小店」。");
             document.getElementById('exifStatus').innerText = '支援 iPhone / Android 含定位資訊之原始照片（選照片時請確認「選項 → 位置」已開啟）';
 
             showModal("🎉 回憶補登成功！已自動依日期時間順序排入足跡清單！");
