@@ -138,7 +138,7 @@
                         <path d="M 125 676 Q 520 621 915 676"/>
                     </g>
 
-                    <!-- 淺藍虛線軌跡（串聯地圖釘、雙腳印與對勾） -->
+                    <!-- 淺藍虛線軌跡 -->
                     <path d="M 332 478
                              C 295 565, 315 655, 355 715
                              C 415 795, 515 675, 555 645
@@ -168,7 +168,6 @@
                                  C 48 165, -46 168, -44 114
                                  C -42 64, -40 24, -46 -22 Z"
                               fill="#FACC15"/>
-                        <!-- 5 個腳趾（大拇趾在內側偏上，其餘 4 趾依序排列） -->
                         <ellipse cx="44" cy="-112" rx="22" ry="27" transform="rotate(14 44 -112)" fill="#FACC15"/>
                         <ellipse cx="14" cy="-126" rx="15" ry="20" transform="rotate(6 14 -126)" fill="#FACC15"/>
                         <ellipse cx="-12" cy="-124" rx="14" ry="18" transform="rotate(-4 -12 -124)" fill="#FACC15"/>
@@ -184,7 +183,6 @@
                                  C 50 168, -48 170, -46 116
                                  C -44 66, -42 24, -48 -24 Z"
                               fill="#FACC15"/>
-                        <!-- 5 個腳趾 -->
                         <ellipse cx="-46" cy="-115" rx="23" ry="28" transform="rotate(-14 -46 -115)" fill="#FACC15"/>
                         <ellipse cx="-16" cy="-128" rx="16" ry="21" transform="rotate(-6 -16 -128)" fill="#FACC15"/>
                         <ellipse cx="10" cy="-126" rx="15" ry="19" transform="rotate(4 10 -126)" fill="#FACC15"/>
@@ -192,7 +190,7 @@
                         <ellipse cx="56" cy="-98" rx="12" ry="16" transform="rotate(20 56 -98)" fill="#FACC15"/>
                     </g>
 
-                    <!-- 右下黃色確認對勾（橘色描邊） -->
+                    <!-- 右下黃色確認對勾 -->
                     <g transform="translate(748, 818)">
                         <path d="M -52 12 L -8 54 L 82 -44"
                               fill="none"
@@ -412,6 +410,27 @@
             </div>
         </section>
 
+        <!-- 修改景點名稱彈窗 -->
+        <div id="editModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div class="bg-slate-900 border-2 border-amber-400 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                <h3 class="text-xl font-black text-amber-300 text-center">
+                    ✏️ 修改打卡景點名稱
+                </h3>
+                <div id="editRecordTimeHint" class="text-sm text-cyan-300 text-center"></div>
+                <div>
+                    <input type="text" id="editNameInput" placeholder="請輸入新的景點名稱或說明..." onkeydown="handleEditKeydown(event)" class="w-full bg-slate-950 text-white border-2 border-amber-400/80 rounded-xl p-3 text-xl placeholder-slate-500 focus:outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closeEditModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg border border-slate-500">
+                        取消
+                    </button>
+                    <button onclick="saveEditedName()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-black py-3 rounded-xl shadow-lg border border-emerald-400">
+                        儲存修改 ✅
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 彈窗與二次確認 -->
         <div id="msgModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div class="bg-slate-900 border-2 border-amber-400 rounded-2xl p-6 max-w-md w-full text-center shadow-2xl">
@@ -447,6 +466,7 @@
         let currentLng = null;
         let allRecords = [];
         let pendingDeleteIndex = null;
+        let pendingEditIndex = null;
         let map = null;
         let mapMarker = null;
         let isMapPickMode = false;
@@ -806,8 +826,9 @@
             }
         }
 
-        function updateDropdownAndMap() {
+        function updateDropdownAndMap(keepSelectedIndex = false) {
             const selectEl = document.getElementById('locationSelect');
+            const prevIdx = selectEl.value;
             selectEl.innerHTML = '';
 
             if (allRecords.length === 0) {
@@ -829,7 +850,11 @@
                 selectEl.add(option);
             });
 
-            selectEl.selectedIndex = 0;
+            if (keepSelectedIndex && prevIdx !== "" && allRecords[prevIdx]) {
+                selectEl.value = prevIdx;
+            } else {
+                selectEl.selectedIndex = 0;
+            }
             onSelectLocationChange();
         }
 
@@ -849,7 +874,7 @@
             }
             const tag = selected.isRetro ? "🕰️ 回憶補登：" : "📍 駐點位置：";
             mapMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`${tag}${selected.desc}<br><small>${selected.time}</small>`)
+                .bindPopup(`${tag}${escapeHtml(selected.desc)}<br><small>${escapeHtml(selected.time)}</small>`)
                 .openPopup();
 
             document.getElementById('navGoBtn').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
@@ -952,17 +977,70 @@
                             <h3 class="text-lg font-bold text-amber-300">📌 ${escapeHtml(item.desc)}${retroBadge}</h3>
                             <span class="text-xs bg-slate-900 text-cyan-300 px-2 py-1 rounded-lg border border-cyan-800 whitespace-nowrap">${item.time}</span>
                         </div>
-                        <div class="flex gap-2 pt-1">
-                            <button onclick="selectAndFocusMap(${index})" class="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white text-base font-bold py-2.5 px-3 rounded-lg text-center border border-cyan-400 shadow whitespace-nowrap">
-                                🗺️ 地圖定位
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <button onclick="selectAndFocusMap(${index})" class="bg-cyan-600 hover:bg-cyan-500 text-white text-sm sm:text-base font-bold py-2.5 px-2 rounded-lg text-center border border-cyan-400 shadow whitespace-nowrap">
+                                🗺️ 定位
                             </button>
-                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-base font-bold py-2.5 px-3 rounded-lg border border-rose-400 shadow whitespace-nowrap">
+                            <button onclick="openEditModal(${index})" class="bg-amber-600 hover:bg-amber-500 text-white text-sm sm:text-base font-bold py-2.5 px-2 rounded-lg text-center border border-amber-300 shadow whitespace-nowrap">
+                                ✏️ 改名
+                            </button>
+                            <button onclick="confirmDeleteRecord(${index})" class="bg-rose-700 hover:bg-rose-600 text-white text-sm sm:text-base font-bold py-2.5 px-2 rounded-lg border border-rose-400 shadow whitespace-nowrap">
                                 🗑️ 刪除
                             </button>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // 開啟修改名稱彈窗
+        function openEditModal(index) {
+            const item = allRecords[index];
+            if (!item) return;
+            pendingEditIndex = index;
+            document.getElementById('editRecordTimeHint').innerText = `打卡時間：${item.time}`;
+            const inputEl = document.getElementById('editNameInput');
+            inputEl.value = item.desc;
+            document.getElementById('editModal').classList.remove('hidden');
+            setTimeout(() => {
+                inputEl.focus();
+                inputEl.select();
+            }, 50);
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            pendingEditIndex = null;
+        }
+
+        function handleEditKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveEditedName();
+            } else if (event.key === 'Escape') {
+                closeEditModal();
+            }
+        }
+
+        function saveEditedName() {
+            if (pendingEditIndex === null || !allRecords[pendingEditIndex]) {
+                closeEditModal();
+                return;
+            }
+            const inputEl = document.getElementById('editNameInput');
+            const newDesc = inputEl.value.trim();
+            if (!newDesc) {
+                showModal("景點名稱不能空白喔！");
+                inputEl.focus();
+                return;
+            }
+
+            allRecords[pendingEditIndex].desc = newDesc;
+            saveData();
+            updateDropdownAndMap(true);
+            renderRecordList();
+            closeEditModal();
+            showModal("✅ 景點名稱已更新！");
         }
 
         function selectAndFocusMap(index) {
