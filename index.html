@@ -2,9 +2,16 @@
 <html lang="zh-TW" translate="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="google" content="notranslate">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="旅遊足跡">
+    <meta name="theme-color" content="#0b0f19">
     <title>旅遊專用足跡與打卡系統</title>
+    <!-- 動態生成的 iOS 主畫面圖示與網頁圖示佔位 -->
+    <link id="appleTouchIcon" rel="apple-touch-icon" sizes="180x180" href="">
+    <link id="faviconIcon" rel="icon" type="image/png" href="">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS 地圖庫 -->
@@ -42,14 +49,121 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen px-4 py-6 font-sans">
+<body class="bg-slate-950 text-white min-h-screen px-4 py-5 font-sans">
 
     <div class="max-w-2xl mx-auto space-y-5">
-        <!-- 簡潔頂部標題 -->
-        <header class="text-center bg-slate-900 border-2 border-amber-400/80 rounded-2xl p-4 shadow-lg">
-            <h1 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide">
-                📍 旅遊足跡與打卡系統
-            </h1>
+        <!-- 品牌視覺頂部標題列（嵌入專屬徽章 Logo） -->
+        <header class="bg-gradient-to-r from-slate-900 via-[#13233c] to-slate-900 border-2 border-amber-400/80 rounded-2xl p-3.5 sm:p-4 shadow-xl flex items-center justify-center gap-3.5 sm:gap-4">
+            <!-- 專屬品牌 Logo SVG -->
+            <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl overflow-hidden shadow-lg border border-sky-400/40 bg-[#0F1B2D]">
+                <svg id="brandLogoSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" class="w-full h-full">
+                    <defs>
+                        <radialGradient id="badgeGradBC" cx="50%" cy="42%" r="60%">
+                            <stop offset="0%" stop-color="#24446E"/>
+                            <stop offset="68%" stop-color="#18304F"/>
+                            <stop offset="100%" stop-color="#0F1B2D"/>
+                        </radialGradient>
+                        <linearGradient id="pinGradBC" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#2EC4B6"/>
+                            <stop offset="100%" stop-color="#1A9E93"/>
+                        </linearGradient>
+                        <linearGradient id="trailGradBC" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#63B3ED" stop-opacity="0.75"/>
+                            <stop offset="100%" stop-color="#CBD5E1" stop-opacity="0.9"/>
+                        </linearGradient>
+                        <clipPath id="badgeClipBC">
+                            <circle cx="512" cy="512" r="408"/>
+                        </clipPath>
+                    </defs>
+
+                    <rect width="1024" height="1024" fill="#0F1B2D"/>
+                    <circle cx="512" cy="512" r="408" fill="url(#badgeGradBC)" stroke="#63B3ED" stroke-opacity="0.35" stroke-width="5"/>
+
+                    <g clip-path="url(#badgeClipBC)" fill="none" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="10">
+                        <ellipse cx="512" cy="512" rx="185" ry="408"/>
+                        <ellipse cx="512" cy="512" rx="320" ry="408"/>
+                        <path d="M 104 345 Q 512 405 920 345"/>
+                        <line x1="104" y1="512" x2="920" y2="512"/>
+                        <path d="M 104 679 Q 512 619 920 679"/>
+                    </g>
+
+                    <circle cx="512" cy="512" r="384" fill="none" stroke="#90CDF4" stroke-opacity="0.22" stroke-width="10"/>
+
+                    <path d="M 322 465
+                             C 255 595, 395 725, 495 660
+                             C 585 600, 610 545, 685 715"
+                          fill="none"
+                          stroke="url(#trailGradBC)"
+                          stroke-width="20"
+                          stroke-linecap="round"
+                          stroke-dasharray="34 26"/>
+
+                    <!-- 左上青綠地圖釘 -->
+                    <g transform="translate(332, 305) rotate(10) scale(0.92)">
+                        <path d="M 0 -145
+                                 C 74 -145, 130 -88, 130 -16
+                                 C 130 66, 24 136, 0 176
+                                 C -24 136, -130 66, -130 -16
+                                 C -130 -88, -74 -145, 0 -145 Z"
+                              fill="url(#pinGradBC)"/>
+                        <circle cx="0" cy="-22" r="44" fill="#FFFFFF"/>
+                    </g>
+
+                    <!-- 後腳（放大 1.5 倍） -->
+                    <g transform="translate(386, 656) rotate(28) scale(1.08)">
+                        <path d="M -42 -24
+                                 C -48 -82 42 -82 44 -22
+                                 C 46 22 28 48 32 82
+                                 C 36 116 -32 116 -30 80
+                                 C -28 44 -36 16 -42 -24 Z"
+                              fill="#FF6B4A"/>
+                        <ellipse cx="-28" cy="-102" rx="15" ry="20" transform="rotate(-12 -28 -102)" fill="#E85535"/>
+                        <ellipse cx="-4" cy="-112" rx="11" ry="15" transform="rotate(-4 -4 -112)" fill="#E85535"/>
+                        <ellipse cx="18" cy="-106" rx="9" ry="13" transform="rotate(6 18 -106)" fill="#E85535"/>
+                        <ellipse cx="37" cy="-92" rx="8" ry="11" transform="rotate(15 37 -92)" fill="#E85535"/>
+                    </g>
+
+                    <!-- 前腳（放大 1.5 倍，間距拉開） -->
+                    <g transform="translate(612, 492) rotate(48) scale(1.08)">
+                        <path d="M -42 -22
+                                 C -44 -80 44 -80 40 -20
+                                 C 36 22 30 48 32 82
+                                 C 34 116 -32 116 -28 80
+                                 C -24 44 -38 16 -42 -22 Z"
+                              fill="#FF6B4A"/>
+                        <ellipse cx="-37" cy="-92" rx="8" ry="11" transform="rotate(-15 -37 -92)" fill="#E85535"/>
+                        <ellipse cx="-18" cy="-106" rx="9" ry="13" transform="rotate(-6 -18 -106)" fill="#E85535"/>
+                        <ellipse cx="4" cy="-112" rx="11" ry="15" transform="rotate(4 4 -112)" fill="#E85535"/>
+                        <ellipse cx="28" cy="-102" rx="15" ry="20" transform="rotate(12 28 -102)" fill="#E85535"/>
+                    </g>
+
+                    <!-- 右下確認對勾 -->
+                    <g transform="translate(718, 724) scale(0.92)">
+                        <path d="M -42 8 L -4 46 L 82 -44"
+                              fill="none"
+                              stroke="#B45309"
+                              stroke-width="46"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                        <path d="M -42 8 L -4 46 L 82 -44"
+                              fill="none"
+                              stroke="#FFD166"
+                              stroke-width="32"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 標題與副標 -->
+            <div class="text-left">
+                <h1 class="text-2xl sm:text-3xl font-black text-amber-300 tracking-wide leading-tight">
+                    旅遊足跡與打卡系統
+                </h1>
+                <p class="text-sm sm:text-base text-sky-300/90 font-bold mt-0.5">
+                    足跡所至・平安相伴
+                </p>
+            </div>
         </header>
 
         <!-- 模式切換分頁按鈕 -->
@@ -267,8 +381,10 @@
             </div>
         </div>
 
-        <footer class="text-center text-slate-400 text-base pb-6">
-            <p>❤️ 專為旅遊設計的安心足跡紀錄系統</p>
+        <!-- 精緻品牌頁尾 -->
+        <footer class="text-center text-slate-400 text-base pb-8 pt-2 flex items-center justify-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+            <p>專為旅遊設計的安心足跡紀錄系統</p>
         </footer>
     </div>
 
@@ -282,7 +398,6 @@
         let isMapPickMode = false;
         let exifrFallbackTried = false;
 
-        // 若主要 CDN 載入失敗，自動改用備援 CDN
         function loadExifrFallback() {
             if (exifrFallbackTried) return;
             exifrFallbackTried = true;
@@ -291,7 +406,40 @@
             document.head.appendChild(fallback);
         }
 
+        // 自動將頁面上的 SVG Logo 渲染成 180x180 PNG，供 iPhone「加入主畫面」與瀏覽器分頁圖示使用
+        function generateAppIconsFromSvg() {
+            try {
+                const svgEl = document.getElementById('brandLogoSvg');
+                if (!svgEl) return;
+                const serializer = new XMLSerializer();
+                const svgStr = serializer.serializeToString(svgEl);
+                const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 180;
+                    canvas.height = 180;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 180, 180);
+
+                    const pngDataUrl = canvas.toDataURL('image/png');
+                    const appleIcon = document.getElementById('appleTouchIcon');
+                    const favIcon = document.getElementById('faviconIcon');
+                    if (appleIcon) appleIcon.href = pngDataUrl;
+                    if (favIcon) favIcon.href = pngDataUrl;
+
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            } catch (e) {
+                console.log("產生主畫面圖示略過", e);
+            }
+        }
+
         window.onload = function() {
+            generateAppIconsFromSvg();
             initMap();
             loadData();
             setDefaultRetroDateTime();
@@ -372,7 +520,6 @@
             document.getElementById('photoExifInput').click();
         }
 
-        // 強化版：解析照片 EXIF 並提供明確診斷原因
         async function handlePhotoExif(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -417,7 +564,6 @@
                 metaErr = e?.message || String(e);
             }
 
-            // 1. 檢查拍攝時間
             let foundTime = false;
             const rawDate = metaData?.DateTimeOriginal || metaData?.CreateDate || metaData?.ModifyDate;
             if (rawDate) {
@@ -430,7 +576,6 @@
                 }
             }
 
-            // 2. 檢查 GPS 經緯度（優先用 exifr.gps，若無則嘗試從 parse 結果讀取）
             let lat = null;
             let lng = null;
             if (gpsData && typeof gpsData.latitude === 'number' && typeof gpsData.longitude === 'number') {
@@ -448,7 +593,6 @@
                 previewRetroOnMap();
             }
 
-            // 3. 依結果顯示清楚的成功或失敗原因
             if (foundGps && foundTime) {
                 statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}）！</span>`;
                 showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n請輸入景點名稱並按「儲存事後回憶補登」。`);
