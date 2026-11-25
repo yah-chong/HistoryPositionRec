@@ -10,8 +10,8 @@
     <!-- Leaflet CSS & JS 地圖庫 -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- exifr 照片 EXIF 時間與 GPS 座標解析庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+    <!-- exifr 完整版 EXIF / GPS 解析庫（含備援） -->
+    <script id="exifrScript" src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js" onerror="loadExifrFallback()"></script>
     <style>
         body {
             background-color: #0b0f19;
@@ -35,7 +35,6 @@
             font-weight: bold;
             font-size: 1.1rem;
         }
-        /* 讓日期時間選擇器在深色模式下顯示白色圖示 */
         input[type="datetime-local"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
             transform: scale(1.3);
@@ -107,16 +106,16 @@
                 <button onclick="triggerPhotoExif()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white text-lg font-black py-3 px-4 rounded-xl border-2 border-cyan-400 flex items-center justify-center gap-2 transition-transform active:scale-95">
                     🖼️ 從手機相簿選擇照片提取資訊
                 </button>
-                <input type="file" id="photoExifInput" accept="image/*" class="hidden" onchange="handlePhotoExif(event)">
-                <div id="exifStatus" class="text-sm text-slate-400 text-center">
-                    支援 iPhone / Android 含定位資訊之原始照片
+                <input type="file" id="photoExifInput" accept="image/*,.heic,.heif" class="hidden" onchange="handlePhotoExif(event)">
+                <div id="exifStatus" class="text-sm text-slate-400 text-center leading-relaxed">
+                    支援 iPhone / Android 含定位資訊之原始照片（選照片時請確認「選項 → 位置」已開啟）
                 </div>
             </div>
 
             <!-- 來源 2：地圖點擊選點 或 貼上 Google 地圖連結 -->
             <div class="bg-slate-950 p-3.5 rounded-xl border border-purple-500/50 space-y-3">
                 <div class="text-base font-bold text-purple-300">
-                    🗺️ 方法 B：無照片時手動指定座標
+                    🗺️ 方法 B：無照片或無 GPS 時手動指定座標
                 </div>
                 <button id="mapPickToggleBtn" onclick="toggleMapPickMode()" class="w-full bg-purple-700 hover:bg-purple-600 text-white text-lg font-black py-3 px-4 rounded-xl border-2 border-purple-400 flex items-center justify-center gap-2 transition-transform active:scale-95">
                     📍 開啟「點擊下方地圖選點」模式
@@ -281,6 +280,16 @@
         let map = null;
         let mapMarker = null;
         let isMapPickMode = false;
+        let exifrFallbackTried = false;
+
+        // 若主要 CDN 載入失敗，自動改用備援 CDN
+        function loadExifrFallback() {
+            if (exifrFallbackTried) return;
+            exifrFallbackTried = true;
+            const fallback = document.createElement('script');
+            fallback.src = "https://unpkg.com/exifr/dist/full.umd.js";
+            document.head.appendChild(fallback);
+        }
 
         window.onload = function() {
             initMap();
@@ -294,7 +303,6 @@
                 attribution: '&copy; Leaflet | &copy; OpenStreetMap'
             }).addTo(map);
 
-            // 監聽地圖點擊事件（用於事後補登選點）
             map.on('click', function(e) {
                 if (!isMapPickMode) return;
                 const lat = Number(e.latlng.lat.toFixed(6));
@@ -307,14 +315,12 @@
                     .bindPopup(`📌 補登選取位置<br>${lat}, ${lng}`)
                     .openPopup();
 
-                // 自動關閉選點模式並捲動回表單填寫名稱
                 toggleMapPickMode(false);
                 showModal(`✅ 已從地圖抓取座標！\n緯度: ${lat}, 經度: ${lng}\n請接著輸入景點名稱並儲存。`);
                 document.getElementById('retroDesc').focus();
             });
         }
 
-        // 切換「即時打卡」與「事後補登」模式
         function switchMode(mode) {
             const liveSec = document.getElementById('liveCheckInSection');
             const retroSec = document.getElementById('retroCheckInSection');
@@ -342,7 +348,6 @@
             document.getElementById('retroDateTime').value = localISOTime;
         }
 
-        // 開關地圖點擊選點模式
         function toggleMapPickMode(forceState) {
             isMapPickMode = (typeof forceState === 'boolean') ? forceState : !isMapPickMode;
             const btn = document.getElementById('mapPickToggleBtn');
@@ -363,68 +368,112 @@
             }
         }
 
-        // 觸發照片 EXIF 讀取
         function triggerPhotoExif() {
             document.getElementById('photoExifInput').click();
         }
 
+        // 強化版：解析照片 EXIF 並提供明確診斷原因
         async function handlePhotoExif(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const statusEl = document.getElementById('exifStatus');
-            statusEl.innerHTML = `<span class="animate-spin-custom">⏳</span> 正在讀取照片拍攝時間與 GPS 資訊...`;
+            const fileSizeKB = (file.size / 1024).toFixed(0);
+            statusEl.innerHTML = `<span class="animate-spin-custom">⏳</span> 正在分析照片（${escapeHtml(file.name)}，${fileSizeKB} KB）...`;
+
+            if (typeof exifr === 'undefined') {
+                const reason = "EXIF 解析元件尚未載入完成（可能是網路連線或擋廣告外掛阻擋 CDN）。";
+                statusEl.innerHTML = `<span class="text-rose-400 font-bold">❌ ${reason}</span>`;
+                showModal(`❌ 照片解析失敗\n\n原因：${reason}\n建議：請重新整理網頁，或直接點選「📍 開啟點擊下方地圖選點模式」。`);
+                event.target.value = '';
+                return;
+            }
+
+            if (!file.size || file.size < 100) {
+                const reason = "選取的檔案大小異常或為空檔案。";
+                statusEl.innerHTML = `<span class="text-rose-400 font-bold">❌ ${reason}</span>`;
+                showModal(`❌ 照片解析失敗\n\n原因：${reason}`);
+                event.target.value = '';
+                return;
+            }
+
+            let gpsData = null;
+            let metaData = null;
+            let gpsErr = null;
+            let metaErr = null;
 
             try {
-                if (typeof exifr === 'undefined') {
-                    throw new Error("EXIF 解析模組尚未載入完成");
-                }
+                gpsData = await exifr.gps(file);
+            } catch (e) {
+                gpsErr = e?.message || String(e);
+            }
 
-                // 同時讀取 GPS 與日期標籤
-                const gpsData = await exifr.gps(file);
-                const metaData = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate', 'ModifyDate']);
+            try {
+                metaData = await exifr.parse(file, {
+                    pick: ['DateTimeOriginal', 'CreateDate', 'ModifyDate', 'GPSLatitude', 'GPSLongitude'],
+                    gps: true
+                });
+            } catch (e) {
+                metaErr = e?.message || String(e);
+            }
 
-                let foundTime = false;
-                let foundGps = false;
-
-                // 1. 提取拍攝時間
-                const photoDate = metaData?.DateTimeOriginal || metaData?.CreateDate || metaData?.ModifyDate || (file.lastModified ? new Date(file.lastModified) : null);
-                if (photoDate && !isNaN(new Date(photoDate).getTime())) {
-                    const d = new Date(photoDate);
+            // 1. 檢查拍攝時間
+            let foundTime = false;
+            const rawDate = metaData?.DateTimeOriginal || metaData?.CreateDate || metaData?.ModifyDate;
+            if (rawDate) {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
                     const offset = d.getTimezoneOffset() * 60000;
                     const localISO = (new Date(d - offset)).toISOString().slice(0, 16);
                     document.getElementById('retroDateTime').value = localISO;
                     foundTime = true;
                 }
-
-                // 2. 提取 GPS 經緯度
-                if (gpsData && typeof gpsData.latitude === 'number' && typeof gpsData.longitude === 'number') {
-                    const lat = Number(gpsData.latitude.toFixed(6));
-                    const lng = Number(gpsData.longitude.toFixed(6));
-                    document.getElementById('retroLat').value = lat;
-                    document.getElementById('retroLng').value = lng;
-                    foundGps = true;
-                    previewRetroOnMap();
-                }
-
-                if (foundGps && foundTime) {
-                    statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功從照片提取「時間」與「GPS 座標」！</span>`;
-                    showModal("📷 太棒了！已自動從照片帶入當時的「拍攝時間」與「GPS 經緯度」，請填寫景點名稱即可儲存！");
-                    document.getElementById('retroDesc').focus();
-                } else if (foundTime && !foundGps) {
-                    statusEl.innerHTML = `<span class="text-amber-300 font-bold">⚠️ 已帶入照片時間，但此照片不含 GPS 定位（可能經過 LINE 壓縮），請改用地圖選點補上座標。</span>`;
-                } else {
-                    statusEl.innerHTML = `<span class="text-rose-400 font-bold">❌ 無法讀取照片 EXIF 資訊，請手動輸入時間與地點。</span>`;
-                }
-            } catch (err) {
-                console.error(err);
-                statusEl.innerHTML = `<span class="text-rose-400 font-bold">❌ 解析照片失敗，請改用地圖點擊選點。</span>`;
-            } finally {
-                event.target.value = '';
             }
+
+            // 2. 檢查 GPS 經緯度（優先用 exifr.gps，若無則嘗試從 parse 結果讀取）
+            let lat = null;
+            let lng = null;
+            if (gpsData && typeof gpsData.latitude === 'number' && typeof gpsData.longitude === 'number') {
+                lat = Number(gpsData.latitude.toFixed(6));
+                lng = Number(gpsData.longitude.toFixed(6));
+            } else if (metaData && typeof metaData.latitude === 'number' && typeof metaData.longitude === 'number') {
+                lat = Number(metaData.latitude.toFixed(6));
+                lng = Number(metaData.longitude.toFixed(6));
+            }
+
+            const foundGps = (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng));
+            if (foundGps) {
+                document.getElementById('retroLat').value = lat;
+                document.getElementById('retroLng').value = lng;
+                previewRetroOnMap();
+            }
+
+            // 3. 依結果顯示清楚的成功或失敗原因
+            if (foundGps && foundTime) {
+                statusEl.innerHTML = `<span class="text-emerald-400 font-bold">✅ 成功提取「拍攝時間」與「GPS 座標」（${lat}, ${lng}）！</span>`;
+                showModal(`📷 照片定位提取成功！\n\n已自動帶入：\n• 拍攝時間\n• 座標：${lat}, ${lng}\n\n請輸入景點名稱並按「儲存事後回憶補登」。`);
+                document.getElementById('retroDesc').focus();
+            } else if (foundTime && !foundGps) {
+                const detail = gpsErr
+                    ? `解析 GPS 時發生錯誤（${gpsErr}），可能是 HEIC 格式在目前瀏覽器受限。`
+                    : "這張照片檔案內沒有 GPS 經緯度資料（可能拍照時在室內/無定位、從 LINE 轉傳被移除定位，或選照片時「選項 → 位置」未開啟）。";
+                statusEl.innerHTML = `<span class="text-amber-300 font-bold">⚠️ 已帶入照片時間，但無 GPS 座標。</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
+                showModal(`⚠️ 已帶入照片時間，但未取得 GPS 座標\n\n原因：${detail}\n\n解法：請點選「📍 開啟點擊下方地圖選點模式」，直接在下方地圖點選位置即可補齊！`);
+            } else if (!foundTime && foundGps) {
+                const detail = metaErr ? `讀取日期標籤失敗（${metaErr}）` : "照片未記錄原始拍攝日期時間，已保留目前選擇的日期時間。";
+                statusEl.innerHTML = `<span class="text-emerald-300 font-bold">✅ 已帶入 GPS 座標（${lat}, ${lng}），但未抓到拍攝時間。</span><br><span class="text-xs text-slate-300">${escapeHtml(detail)}</span>`;
+                showModal(`✅ 已帶入 GPS 座標（${lat}, ${lng}）\n\n提醒：${detail} 請確認上方「當時抵達的日期與時間」是否正確。`);
+            } else {
+                const techReason = (gpsErr || metaErr)
+                    ? `格式解析錯誤（${gpsErr || metaErr}）。`
+                    : "照片中找不到 EXIF 拍攝時間與 GPS 定位資料（常見於通訊軟體下載圖、螢幕截圖，或 iPhone 選取照片時未勾選「位置」）。";
+                statusEl.innerHTML = `<span class="text-rose-400 font-bold">❌ 無法從照片自動提取時間與座標。</span><br><span class="text-xs text-slate-300">${escapeHtml(techReason)}</span>`;
+                showModal(`❌ 照片自動定位失敗\n\n原因：${techReason}\n\n建議做法：\n1. 在 iPhone「照片」App 點開該照片按 (i) 確認是否有地點\n2. 選照片時確認「選項 → 位置」已開啟\n3. 或直接點選「📍 開啟點擊下方地圖選點模式」手動選點`);
+            }
+
+            event.target.value = '';
         }
 
-        // 解析貼上的 Google Maps 網址或純經緯度字串
         function parseLocationInput() {
             const raw = document.getElementById('gmapsUrlInput').value.trim();
             if (!raw) {
@@ -432,7 +481,6 @@
                 return;
             }
 
-            // 支援 @lat,lng 或 ?q=lat,lng 或純 lat,lng
             const regex = /(-?\d{1,3}\.\d+)[,\s]+(-?\d{1,3}\.\d+)/;
             const match = raw.match(regex);
 
@@ -450,7 +498,6 @@
             showModal("❌ 無法從文字中辨識經緯度！\n提示：如果是短網址（maps.app.goo.gl），請在瀏覽器打開後複製完整網址，或直接使用「點擊地圖選點」。");
         }
 
-        // 在地圖上預覽補登位置
         function previewRetroOnMap() {
             const lat = parseFloat(document.getElementById('retroLat').value);
             const lng = parseFloat(document.getElementById('retroLng').value);
@@ -463,7 +510,6 @@
             }
         }
 
-        // 儲存事後回憶補登
         function saveRetroCheckIn() {
             const dtVal = document.getElementById('retroDateTime').value;
             const lat = parseFloat(document.getElementById('retroLat').value);
@@ -491,7 +537,6 @@
             }
 
             const now = new Date();
-            // 若補登年份與今年不同，時間字串自動加上年份方便辨識
             const yearPrefix = (dateObj.getFullYear() !== now.getFullYear()) ? `${dateObj.getFullYear()}/` : "";
             const timeString = `${yearPrefix}${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
 
@@ -506,26 +551,23 @@
             };
 
             allRecords.push(retroRecord);
-            // 依照時間戳記由新到舊自動排序，確保時間軸順序正確
             allRecords.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
             saveData();
             updateDropdownAndMap();
             renderRecordList();
 
-            // 選中剛新增的那筆紀錄並定位在地圖上
             const insertedIdx = allRecords.findIndex(r => r.id === retroRecord.id);
             if (insertedIdx !== -1) {
                 document.getElementById('locationSelect').value = insertedIdx;
                 onSelectLocationChange();
             }
 
-            // 清空表單欄位
             document.getElementById('retroDesc').value = '';
             document.getElementById('retroLat').value = '';
             document.getElementById('retroLng').value = '';
             document.getElementById('gmapsUrlInput').value = '';
-            document.getElementById('exifStatus').innerText = '支援 iPhone / Android 含定位資訊之原始照片';
+            document.getElementById('exifStatus').innerText = '支援 iPhone / Android 含定位資訊之原始照片（選照片時請確認「選項 → 位置」已開啟）';
 
             showModal("🎉 回憶補登成功！已自動依日期時間順序排入足跡清單！");
         }
